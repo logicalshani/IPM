@@ -1,0 +1,197 @@
+@import "@shopify/polaris/build/esm/styles.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --imp-bg: #f6f7f9;
+  --imp-surface: #ffffff;
+  --imp-border: #d9dee7;
+  --imp-text: #17202a;
+}
+
+html,
+body {
+  min-height: 100%;
+  background: var(--imp-bg);
+  color: var(--imp-text);
+}
+
+body {
+  margin: 0;
+}
+
+.imp-shell {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  min-height: 100vh;
+  min-width: 0;
+  width: 100%;
+}
+
+.imp-sidebar {
+  background: #111827;
+  color: #f9fafb;
+  padding: 24px 18px;
+}
+
+.imp-main {
+  min-width: 0;
+  padding: 24px;
+}
+
+.imp-link {
+  align-items: center;
+  border-radius: 8px;
+  color: #d1d5db;
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  text-decoration: none;
+}
+
+.imp-link:hover,
+.imp-link[data-active="true"] {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.imp-nav-group {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 6px;
+}
+
+.imp-nav-group summary {
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  list-style: none;
+  padding: 8px 12px;
+  text-transform: uppercase;
+}
+
+.imp-nav-group summary::-webkit-details-marker {
+  display: none;
+}
+
+.imp-nav-group summary::after {
+  content: "+";
+  float: right;
+}
+
+.imp-nav-group[open] summary::after {
+  content: "-";
+}
+
+.imp-band {
+  background: var(--imp-surface);
+  border: 1px solid var(--imp-border);
+  border-radius: 8px;
+}
+
+.imp-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.imp-table th,
+.imp-table td {
+  border-bottom: 1px solid var(--imp-border);
+  padding: 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.imp-table th {
+  color: #4a5568;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.variance-match {
+  color: #057a55;
+}
+
+.variance-warning {
+  color: #a16207;
+}
+
+.variance-critical {
+  color: #b91c1c;
+}
+
+@media (max-width: 860px) {
+  .imp-shell {
+    grid-template-columns: 1fr;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  .imp-sidebar {
+    max-width: 100vw;
+    min-width: 0;
+    overflow-x: hidden;
+    position: sticky;
+    top: 0;
+    width: 100%;
+    z-index: 20;
+    padding: 14px 12px;
+  }
+
+  .imp-sidebar > div {
+    margin-bottom: 10px;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .imp-sidebar nav {
+    display: flex;
+    gap: 8px;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+    width: 100%;
+  }
+
+  .imp-nav-group {
+    border: 0;
+    flex: 0 0 auto;
+    padding-bottom: 0;
+  }
+
+  .imp-nav-group summary {
+    min-height: 48px;
+    padding: 14px 10px;
+  }
+
+  .imp-nav-group > div {
+    display: flex;
+    gap: 8px;
+  }
+
+  .imp-link {
+    flex: 0 0 auto;
+    min-height: 48px;
+    min-width: 48px;
+    white-space: nowrap;
+  }
+
+  .imp-main {
+    max-width: 100vw;
+    min-width: 0;
+    overflow-x: hidden;
+    padding: 16px;
+    width: 100%;
+  }
+}

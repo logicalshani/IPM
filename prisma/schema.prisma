@@ -1,0 +1,2251 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum FeatureStatus {
+  ENABLED
+  DISABLED
+}
+
+enum StocktakeStatus {
+  DRAFT
+  IN_PROGRESS
+  PENDING_APPROVAL
+  APPROVED
+  SYNCED
+}
+
+enum CountMode {
+  FULL
+  PARTIAL
+  BLIND
+  CYCLE
+}
+
+enum StocktakeLineStatus {
+  OPEN
+  NEEDS_INVESTIGATION
+  CONFIRMED
+  RECOUNT
+  APPROVED
+  REJECTED
+}
+
+enum BarcodeFormat {
+  EAN_13
+  CODE_128
+  QR_CODE
+  DATA_MATRIX
+}
+
+enum MovementType {
+  SALE
+  RETURN
+  RECEIVING
+  TRANSFER_IN
+  TRANSFER_OUT
+  ADJUSTMENT
+  DAMAGE
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  SENT
+  SENT_TO_SUPPLIER
+  PARTIALLY_RECEIVED
+  FULLY_RECEIVED
+  INVOICED
+  RECEIVED
+  CLOSED
+  CANCELLED
+  DISPUTED
+}
+
+enum PurchaseOrderApprovalRole {
+  MANAGER
+  OWNER
+}
+
+enum PurchaseOrderApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  AUTO_APPROVED
+}
+
+enum BackorderRecommendation {
+  WAIT_FOR_BACKORDER
+  SOURCE_ALTERNATE
+  ADJUST_SHOPIFY_AVAILABILITY
+}
+
+enum ContractStatus {
+  ACTIVE
+  EXPIRING
+  EXPIRED
+  ARCHIVED
+}
+
+enum CommunicationChannel {
+  EMAIL
+  WHATSAPP
+  PHONE
+  NOTE
+}
+
+enum CommunicationDirection {
+  OUTBOUND
+  INBOUND
+}
+
+enum SupplierEmailIntent {
+  PO_FOLLOW_UP
+  DELAY_INQUIRY
+  PRICE_NEGOTIATION
+  INVOICE_DISPUTE
+  RETURN_REQUEST
+}
+
+enum AIFeedbackRating {
+  THUMBS_UP
+  THUMBS_DOWN
+}
+
+enum ForecastSignalType {
+  GOOGLE_TRENDS
+  SHOPIFY_DISCOUNT
+  RETURN_RATE
+  SEASONALITY
+  RESTOCK_HALO
+  MERCHANT_PROXY
+}
+
+enum InvoiceReviewStatus {
+  PARSED
+  MATCHED
+  APPROVED
+  FLAGGED
+  EXPORTED
+}
+
+enum InventoryValuationMethod {
+  FIFO
+  LIFO
+  WEIGHTED_AVERAGE
+}
+
+enum InventoryAdjustmentReason {
+  DAMAGED
+  STOLEN
+  EXPIRED
+  DATA_ERROR
+  CORRECTION
+}
+
+enum ReturnCondition {
+  RESELLABLE
+  DAMAGED
+  DEFECTIVE
+  SUPPLIER_FAULT
+}
+
+enum RestockingDecision {
+  RESTOCK_NEW
+  RESTOCK_OPEN_BOX
+  LIQUIDATE
+  DISPOSE
+}
+
+enum RmaStatus {
+  DRAFT
+  SENT
+  APPROVED
+  REJECTED
+  CLOSED
+}
+
+enum BatchDisposition {
+  AVAILABLE
+  EXPIRING
+  EXPIRED
+  RECALL
+  DISPOSED
+  DISCOUNT
+}
+
+enum ThreePLProvider {
+  SHIPBOB
+  FLEXPORT
+  DELIVERR
+  AMAZON_FBA
+  WEBHOOK
+}
+
+enum WarehouseSyncStatus {
+  MATCHED
+  DISCREPANCY
+  UPDATED_SHOPIFY
+}
+
+enum TransferStatus {
+  SUGGESTED
+  DRAFT
+  IN_TRANSIT
+  RECEIVED
+  CANCELLED
+}
+
+enum ReportVisualization {
+  TABLE
+  BAR
+  LINE
+  PIE
+}
+
+enum ReportScheduleFrequency {
+  WEEKLY
+  MONTHLY
+}
+
+enum IntegrationProvider {
+  SHOPIFY
+  QUICKBOOKS_ONLINE
+  XERO
+  SLACK
+  MICROSOFT_TEAMS
+  PUBLIC_API
+}
+
+enum IntegrationStatus {
+  PENDING
+  CONNECTED
+  DISCONNECTED
+  ERROR
+}
+
+enum SyncDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum SyncLogStatus {
+  SUCCESS
+  FAILED
+  RETRYING
+}
+
+enum AccountingExportType {
+  INVENTORY_VALUATION
+  COGS_ENTRY
+  PURCHASE_ORDER_BILL
+  JOURNAL_ENTRY
+}
+
+enum MobileSyncStatus {
+  QUEUED
+  SYNCED
+  FAILED
+}
+
+enum WhiteLabelStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+}
+
+enum ManagedStoreStatus {
+  CONNECTED
+  SYNCING
+  DISCONNECTED
+  ERROR
+}
+
+enum CrossStoreTransferStatus {
+  SUGGESTED
+  APPROVED
+  IN_TRANSIT
+  COMPLETED
+  DISMISSED
+}
+
+enum AccessRole {
+  OWNER
+  ADMIN
+  INVENTORY_MANAGER
+  PURCHASING_MANAGER
+  WAREHOUSE_STAFF
+  AUDITOR
+}
+
+enum AuditSyncStatus {
+  NOT_SYNCED
+  SUCCESS
+  FAILED
+  PENDING
+}
+
+enum BillingPlanKey {
+  STARTER
+  GROWTH
+  PRO
+  AGENCY
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  PAUSED
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum AlertStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+  DISMISSED
+}
+
+enum MigrationJobStatus {
+  DRAFT
+  VALIDATING
+  READY
+  RUNNING
+  COMPLETED
+  FAILED
+  ROLLED_BACK
+}
+
+enum MigrationEntityType {
+  SUPPLIERS
+  PRODUCTS
+  PURCHASE_ORDERS
+  STOCK_COUNTS
+  TRANSFERS
+  HISTORICAL_DATA
+}
+
+enum AIMessageRole {
+  SYSTEM
+  USER
+  ASSISTANT
+  TOOL
+}
+
+model Shop {
+  id             String             @id @default(cuid())
+  shopifyDomain  String             @unique
+  name           String
+  billingPlan    String             @default("starter")
+  features       Feature[]
+  users          User[]
+  locations      Location[]
+  products       Product[]
+  stocktakes     StocktakeSession[]
+  barcodeAssets  BarcodeAsset[]
+  suppliers      Supplier[]
+  aiSessions     AIConsultationSession[]
+  demandForecasts DemandForecast[]
+  parsedInvoices ParsedInvoice[]
+  profitScenarios ProfitScenario[]
+  competitorProducts CompetitorProduct[]
+  financialSettings FinancialSettings?
+  inventoryCostLayers InventoryCostLayer[]
+  inventoryAdjustments InventoryAdjustment[]
+  financialAlerts FinancialAlert[]
+  returnIntakes ReturnIntake[]
+  supplierRmas SupplierRma[]
+  inventoryBatches InventoryBatch[]
+  threePLConnections ThreePLConnection[]
+  threePLSnapshots ThreePLInventorySnapshot[]
+  transferSuggestions InventoryTransferSuggestion[]
+  inventoryTransfers InventoryTransfer[]
+  customReports CustomReport[]
+  scheduledReports ScheduledReport[]
+  integrationConnections IntegrationConnection[]
+  syncLogs SyncLog[]
+  shopifyWebhookEvents ShopifyWebhookEvent[]
+  shopifyMetafieldSyncs ShopifyMetafieldSync[]
+  shopifyFlowEvents ShopifyFlowEvent[]
+  accountingExports AccountingExport[]
+  chatConnections ChatBotConnection[]
+  mobileOfflineSyncs MobileOfflineSync[]
+  publicApiKeys PublicApiKey[]
+  outboundWebhookSubscriptions OutboundWebhookSubscription[]
+  whiteLabelProfile WhiteLabelProfile?
+  managedStores ManagedStore[]
+  crossStoreTransferSuggestions CrossStoreTransferSuggestion[]
+  aiMemoryEvents AIMemoryEvent[]
+  aiPinnedInsights AIPinnedInsight[]
+  rolePermissions RolePermission[]
+  userRoleAssignments UserRoleAssignment[]
+  complianceAuditLogs ComplianceAuditLog[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+}
+
+model Feature {
+  id        String        @id @default(cuid())
+  shopId    String
+  key       String
+  plan      String
+  status    FeatureStatus @default(DISABLED)
+  config    Json?
+  shop      Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@unique([shopId, key])
+}
+
+model User {
+  id          String             @id @default(cuid())
+  shopId      String
+  name        String
+  email       String
+  role        String             @default("operator")
+  shop        Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  assignments StocktakeSession[] @relation("StocktakeAssignee")
+  approvals   StocktakeSession[] @relation("StocktakeApprover")
+  inventoryAdjustments InventoryAdjustment[]
+  accessRoles  UserRoleAssignment[]
+  auditLogs    ComplianceAuditLog[]
+
+  @@unique([shopId, email])
+}
+
+model Location {
+  id              String             @id @default(cuid())
+  shopId          String
+  shopifyLocationId String?
+  name            String
+  barcode         String?
+  shop            Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  products        ProductInventory[]
+  stocktakes      StocktakeSession[]
+  inventoryAdjustments InventoryAdjustment[]
+  inventoryBatches InventoryBatch[]
+  inventoryLevels InventoryLevel[]
+
+  @@unique([shopId, name])
+}
+
+model Product {
+  id                 String              @id @default(cuid())
+  shopId             String
+  supplierId         String?
+  shopifyProductId   String?
+  shopifyVariantId   String?
+  sku                String
+  name               String
+  category           String?
+  supplier           String?
+  price              Decimal             @db.Decimal(12, 2)
+  cost               Decimal             @db.Decimal(12, 2)
+  barcode            String?
+  expiryDate         DateTime?
+  shop               Shop                @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  supplierRecord     Supplier?           @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  inventory          ProductInventory[]
+  movements          InventoryMovement[]
+  stocktakeLines     StocktakeLine[]
+  barcodeAssets      BarcodeAsset[]
+  purchaseOrderLines PurchaseOrderLine[]
+  priceListItems     SupplierPriceListItem[]
+  demandProfile      ProductDemandProfile?
+  demandForecasts    DemandForecast[]
+  forecastAccuracy   ForecastAccuracy[]
+  parsedInvoiceLines ParsedInvoiceLine[]
+  profitScenarioOptions ProfitScenarioOption[]
+  competitorProducts CompetitorProduct[]
+  sourcingOptions   ProductSupplierOption[]
+  costLayers        InventoryCostLayer[]
+  inventoryAdjustments InventoryAdjustment[]
+  returnIntakes     ReturnIntake[]
+  inventoryBatches  InventoryBatch[]
+  threePLSnapshots  ThreePLInventorySnapshot[]
+  transferSuggestionLines InventoryTransferSuggestionLine[]
+  transferLines     InventoryTransferLine[]
+  replenishmentRules LocationReplenishmentRule[]
+  shopifyMetafieldSyncs ShopifyMetafieldSync[]
+  variants          ProductVariant[]
+
+  @@unique([shopId, sku])
+  @@index([shopId, category])
+  @@index([shopId, supplier])
+  @@index([shopId, supplierId])
+}
+
+model ProductInventory {
+  id         String   @id @default(cuid())
+  productId String
+  locationId String
+  quantity   Int      @default(0)
+  inTransitQuantity Int @default(0)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, locationId])
+}
+
+model InventoryMovement {
+  id          String       @id @default(cuid())
+  shopId      String
+  productId   String
+  locationId  String?
+  type        MovementType
+  quantity    Int
+  unitCost    Decimal      @db.Decimal(12, 2)
+  reference   String?
+  notes       String?
+  occurredAt  DateTime     @default(now())
+  product     Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, productId, occurredAt])
+}
+
+model StocktakeSession {
+  id            String          @id @default(cuid())
+  shopId        String
+  name          String
+  locationId    String?
+  assignedUserId String?
+  approvedById  String?
+  scheduledDate DateTime?
+  status        StocktakeStatus @default(DRAFT)
+  mode          CountMode       @default(FULL)
+  filters       Json?
+  blindCount    Boolean         @default(false)
+  varianceThresholdPercent Decimal @default(5) @db.Decimal(5, 2)
+  varianceThresholdValue   Decimal @default(50) @db.Decimal(12, 2)
+  shop          Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  location      Location?       @relation(fields: [locationId], references: [id])
+  assignedUser  User?           @relation("StocktakeAssignee", fields: [assignedUserId], references: [id])
+  approvedBy    User?           @relation("StocktakeApprover", fields: [approvedById], references: [id])
+  lines         StocktakeLine[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([shopId, status])
+  @@index([shopId, scheduledDate])
+}
+
+model StocktakeLine {
+  id              String              @id @default(cuid())
+  sessionId       String
+  productId       String
+  expectedQuantity Int
+  countedQuantity Int?
+  averagedQuantity Decimal?            @db.Decimal(12, 2)
+  varianceUnits   Int                  @default(0)
+  varianceValue   Decimal              @default(0) @db.Decimal(12, 2)
+  variancePercent Decimal              @default(0) @db.Decimal(8, 2)
+  status          StocktakeLineStatus  @default(OPEN)
+  countSource     String?
+  investigationNote String?
+  lastCountedAt   DateTime?
+  session         StocktakeSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  product         Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, productId])
+  @@index([sessionId, status])
+}
+
+model BarcodeTemplate {
+  id        String   @id @default(cuid())
+  shopId    String
+  name      String
+  widthMm   Int
+  heightMm  Int
+  fields    Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([shopId, name])
+}
+
+model BarcodeAsset {
+  id        String        @id @default(cuid())
+  shopId    String
+  productId String?
+  format    BarcodeFormat
+  value     String
+  imageData String
+  shop      Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  product   Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
+  createdAt DateTime      @default(now())
+
+  @@index([shopId, format])
+}
+
+model Supplier {
+  id                    String                        @id @default(cuid())
+  shopId                String
+  name                  String
+  email                 String?
+  phone                 String?
+  whatsappNumber       String?
+  defaultCurrency       String                        @default("USD")
+  paymentTerms          String?
+  reliabilityScore      Decimal                       @default(0) @db.Decimal(5, 2)
+  previousReliabilityScore Decimal                    @default(0) @db.Decimal(5, 2)
+  onTimeRate            Decimal                       @default(0) @db.Decimal(5, 2)
+  fillRate              Decimal                       @default(0) @db.Decimal(5, 2)
+  invoiceAccuracy       Decimal                       @default(0) @db.Decimal(5, 2)
+  notes                 String?
+  shop                  Shop                          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  products              Product[]
+  leadTimes             SupplierCategoryLeadTime[]
+  purchaseOrders        PurchaseOrder[]
+  reliabilitySnapshots  SupplierReliabilitySnapshot[]
+  seasonalRiskPeriods   SupplierSeasonalRiskPeriod[]
+  priceLists            SupplierPriceList[]
+  contracts             SupplierContract[]
+  communications        SupplierCommunication[]
+  sourcingOptions       ProductSupplierOption[]
+  rmas                  SupplierRma[]
+  createdAt             DateTime                      @default(now())
+  updatedAt             DateTime                      @updatedAt
+
+  @@unique([shopId, name])
+  @@index([shopId, reliabilityScore])
+}
+
+model SupplierCategoryLeadTime {
+  id                    String   @id @default(cuid())
+  shopId                String
+  supplierId            String
+  category              String
+  minimumDays           Int
+  maximumDays           Int
+  averageDays           Decimal  @db.Decimal(8, 2)
+  rolling90DayAverage   Decimal? @db.Decimal(8, 2)
+  dynamicEstimateDays   Decimal  @default(0) @db.Decimal(8, 2)
+  bufferDays            Int      @default(0)
+  recentDegradationPercent Decimal @default(0) @db.Decimal(8, 2)
+  supplier              Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  updatedAt             DateTime @updatedAt
+  createdAt             DateTime @default(now())
+
+  @@unique([supplierId, category])
+  @@index([shopId, category])
+}
+
+model SupplierSeasonalRiskPeriod {
+  id          String   @id @default(cuid())
+  shopId      String
+  supplierId  String?
+  name        String
+  startsOn    DateTime
+  endsOn      DateTime
+  bufferDays  Int
+  notes       String?
+  supplier    Supplier? @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, startsOn, endsOn])
+}
+
+model PurchaseOrder {
+  id                    String              @id @default(cuid())
+  shopId                String
+  supplierId            String
+  poNumber              String
+  status                PurchaseOrderStatus @default(DRAFT)
+  approvalTier          String?
+  approvedAt            DateTime?
+  sentAt                DateTime?
+  closedAt              DateTime?
+  cancelledAt           DateTime?
+  orderedAt             DateTime            @default(now())
+  promisedDeliveryDate  DateTime?
+  actualDeliveryDate    DateTime?
+  deliveryDeltaDays     Int?
+  invoiceAccurate       Boolean?
+  invoiceTotal          Decimal?            @db.Decimal(12, 2)
+  expectedTotal         Decimal?            @db.Decimal(12, 2)
+  subtotal              Decimal             @default(0) @db.Decimal(12, 2)
+  freightCost           Decimal             @default(0) @db.Decimal(12, 2)
+  customsCost           Decimal             @default(0) @db.Decimal(12, 2)
+  handlingCost          Decimal             @default(0) @db.Decimal(12, 2)
+  landedTotal           Decimal             @default(0) @db.Decimal(12, 2)
+  trackingNumber        String?
+  supplierEmailMessageId String?
+  threeWayMatchJson     Json?
+  backorderRecommendation BackorderRecommendation?
+  notes                 String?
+  supplier              Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  lines                 PurchaseOrderLine[]
+  parsedInvoices        ParsedInvoice[]
+  approvals             PurchaseOrderApproval[]
+  backorderReminders    BackorderReminder[]
+  landedCostLines       PurchaseOrderLandedCost[]
+  canonicalItems        PurchaseOrderItem[]
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  @@unique([shopId, poNumber])
+  @@index([shopId, supplierId, orderedAt])
+  @@index([shopId, actualDeliveryDate])
+}
+
+model PurchaseOrderLine {
+  id                 String        @id @default(cuid())
+  purchaseOrderId    String
+  productId          String?
+  sku                String
+  category           String
+  orderedQuantity    Int
+  receivedQuantity   Int           @default(0)
+  backorderedQuantity Int          @default(0)
+  unitPrice          Decimal       @db.Decimal(12, 2)
+  landedUnitCost     Decimal?      @db.Decimal(12, 2)
+  marginAfterLandedCost Decimal?   @db.Decimal(12, 2)
+  invoiceUnitPrice   Decimal?      @db.Decimal(12, 2)
+  invoiceQuantity    Int?
+  priceVariance      Decimal       @default(0) @db.Decimal(12, 2)
+  receivedAt         DateTime?
+  disputed           Boolean       @default(false)
+  disputeReason      String?
+  purchaseOrder      PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product            Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([purchaseOrderId, category])
+}
+
+model ProductSupplierOption {
+  id          String   @id @default(cuid())
+  shopId      String
+  productId   String
+  supplierId  String
+  supplierSku String?
+  unitPrice   Decimal  @db.Decimal(12, 2)
+  moq         Int      @default(1)
+  leadTimeDays Decimal @db.Decimal(8, 2)
+  active      Boolean  @default(true)
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  supplier    Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, supplierId])
+  @@index([shopId, supplierId])
+}
+
+model PurchaseOrderApprovalPolicy {
+  id            String                    @id @default(cuid())
+  shopId        String
+  name          String
+  minAmount     Decimal                   @db.Decimal(12, 2)
+  maxAmount     Decimal?                  @db.Decimal(12, 2)
+  requiredRole  PurchaseOrderApprovalRole?
+  autoApprove   Boolean                   @default(false)
+  active        Boolean                   @default(true)
+
+  @@index([shopId, active])
+}
+
+model PurchaseOrderApproval {
+  id              String                      @id @default(cuid())
+  shopId          String
+  purchaseOrderId String
+  requiredRole    PurchaseOrderApprovalRole?
+  approverUserId  String?
+  status          PurchaseOrderApprovalStatus @default(PENDING)
+  token           String                      @unique
+  requestedAt     DateTime                    @default(now())
+  decidedAt       DateTime?
+  note            String?
+  purchaseOrder   PurchaseOrder               @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, purchaseOrderId, status])
+}
+
+model PurchaseOrderLandedCost {
+  id              String        @id @default(cuid())
+  shopId          String
+  purchaseOrderId String
+  type            String
+  amount          Decimal       @db.Decimal(12, 2)
+  allocationBasis String        @default("quantity")
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now())
+
+  @@index([shopId, purchaseOrderId])
+}
+
+model BackorderReminder {
+  id              String        @id @default(cuid())
+  shopId          String
+  purchaseOrderId String
+  purchaseOrderLineId String?
+  supplierId      String
+  sku             String
+  quantity        Int
+  dueAt           DateTime
+  status          String        @default("open")
+  recommendation  BackorderRecommendation?
+  note            String?
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now())
+
+  @@index([shopId, dueAt, status])
+}
+
+model SupplierReliabilitySnapshot {
+  id               String   @id @default(cuid())
+  shopId           String
+  supplierId       String
+  month            DateTime
+  category         String?
+  onTimeRate       Decimal  @db.Decimal(5, 2)
+  fillRate         Decimal  @db.Decimal(5, 2)
+  invoiceAccuracy  Decimal  @db.Decimal(5, 2)
+  reliabilityScore Decimal  @db.Decimal(5, 2)
+  averageDelayDays Decimal  @db.Decimal(8, 2)
+  supplier         Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@unique([supplierId, month, category])
+  @@index([shopId, month])
+}
+
+model SupplierPriceList {
+  id            String                  @id @default(cuid())
+  shopId        String
+  supplierId    String
+  name          String
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  currency      String                  @default("USD")
+  supplier      Supplier                @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  items         SupplierPriceListItem[]
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+
+  @@index([shopId, supplierId, effectiveFrom])
+}
+
+model SupplierPriceListItem {
+  id              String            @id @default(cuid())
+  priceListId     String
+  productId       String?
+  sku             String
+  moq             Int               @default(1)
+  unitPrice       Decimal           @db.Decimal(12, 2)
+  previousUnitPrice Decimal?        @db.Decimal(12, 2)
+  priceChangePercent Decimal        @default(0) @db.Decimal(8, 2)
+  marginImpact    Decimal           @default(0) @db.Decimal(12, 2)
+  priceList       SupplierPriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
+  product         Product?          @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([priceListId, sku])
+}
+
+model SupplierContract {
+  id             String         @id @default(cuid())
+  shopId         String
+  supplierId     String
+  title          String
+  status         ContractStatus @default(ACTIVE)
+  effectiveDate  DateTime?
+  renewalDate    DateTime?
+  paymentTerms   String?
+  moqTerms       String?
+  leadTimeCommitment String?
+  returnPolicy   String?
+  exclusivityClauses String?
+  aiSummary      String?
+  sourceFileName String?
+  supplier       Supplier       @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([shopId, renewalDate])
+}
+
+model SupplierCommunication {
+  id          String                 @id @default(cuid())
+  shopId      String
+  supplierId  String
+  channel     CommunicationChannel
+  direction   CommunicationDirection
+  intent      SupplierEmailIntent?
+  subject     String?
+  body        String
+  externalId  String?
+  status      String                 @default("draft")
+  sentAt      DateTime?
+  createdAt   DateTime               @default(now())
+  supplier    Supplier               @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, supplierId, createdAt])
+}
+
+model AIConsultationSession {
+  id              String            @id @default(cuid())
+  shopId          String
+  userId          String?
+  question        String
+  answer          String?
+  dataSnapshot    Json
+  intent          String
+  confidence      String
+  suggestedAction String
+  feedback        AIFeedbackRating?
+  feedbackNote    String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  shop            Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  pinnedInsights  AIPinnedInsight[]
+
+  @@index([shopId, createdAt])
+}
+
+model ProductDemandProfile {
+  id                    String   @id @default(cuid())
+  shopId                String
+  productId             String   @unique
+  baselineDailyDemand   Decimal  @default(0) @db.Decimal(10, 2)
+  salesVelocity30d      Decimal  @default(0) @db.Decimal(10, 2)
+  returnRate            Decimal  @default(0) @db.Decimal(5, 2)
+  activeDiscountPercent Decimal  @default(0) @db.Decimal(5, 2)
+  merchantProxyDemand   Decimal? @db.Decimal(10, 2)
+  restockHaloMultiplier Decimal  @default(1) @db.Decimal(5, 2)
+  daysSinceLastSale     Int?
+  lastSaleAt            DateTime?
+  product               Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  updatedAt             DateTime @updatedAt
+  createdAt             DateTime @default(now())
+
+  @@index([shopId, salesVelocity30d])
+}
+
+model DemandForecast {
+  id                    String   @id @default(cuid())
+  shopId                String
+  productId             String
+  forecastDate          DateTime @default(now())
+  horizonDays           Int
+  baselineDemand        Decimal  @db.Decimal(12, 2)
+  adjustedDemand        Decimal  @db.Decimal(12, 2)
+  trendSignal           Decimal  @default(0) @db.Decimal(8, 2)
+  seasonalitySignal     Decimal  @default(0) @db.Decimal(8, 2)
+  noiseSignal           Decimal  @default(0) @db.Decimal(8, 2)
+  externalTrendScore    Decimal  @default(0) @db.Decimal(8, 2)
+  returnRateAdjustment  Decimal  @default(0) @db.Decimal(8, 2)
+  discountAdjustment    Decimal  @default(0) @db.Decimal(8, 2)
+  restockHaloAdjustment Decimal  @default(0) @db.Decimal(8, 2)
+  forecastValue         Decimal  @db.Decimal(12, 2)
+  accuracyMape          Decimal? @db.Decimal(8, 2)
+  modelConfidence       String
+  product               Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  shop                  Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  createdAt             DateTime @default(now())
+
+  @@index([shopId, forecastDate])
+  @@index([productId, horizonDays])
+}
+
+model ForecastAccuracy {
+  id             String   @id @default(cuid())
+  shopId         String
+  productId      String
+  month          DateTime
+  forecastDemand Decimal  @db.Decimal(12, 2)
+  actualDemand   Decimal  @db.Decimal(12, 2)
+  mape           Decimal  @db.Decimal(8, 2)
+  tuningSuggestion String?
+  product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, month])
+  @@index([shopId, month])
+}
+
+model DemandSignal {
+  id          String             @id @default(cuid())
+  shopId      String
+  productId   String?
+  keyword     String
+  type        ForecastSignalType
+  score       Decimal            @db.Decimal(8, 2)
+  observedAt  DateTime           @default(now())
+  metadata    Json?
+
+  @@index([shopId, type, observedAt])
+  @@index([productId, observedAt])
+}
+
+model ParsedInvoice {
+  id              String              @id @default(cuid())
+  shopId          String
+  purchaseOrderId String?
+  supplierName    String
+  invoiceNumber   String
+  invoiceDate     DateTime?
+  dueDate         DateTime?
+  paymentTerms    String?
+  subtotal        Decimal             @default(0) @db.Decimal(12, 2)
+  total           Decimal             @default(0) @db.Decimal(12, 2)
+  status          InvoiceReviewStatus @default(PARSED)
+  sourceFileName  String?
+  rawExtractedJson Json
+  discrepancySummary Json?
+  shop            Shop                @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  purchaseOrder   PurchaseOrder?      @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+  lines           ParsedInvoiceLine[]
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@unique([shopId, invoiceNumber])
+  @@index([shopId, status])
+}
+
+model ParsedInvoiceLine {
+  id              String        @id @default(cuid())
+  parsedInvoiceId String
+  productId       String?
+  sku             String
+  description     String
+  quantity        Int
+  unitPrice       Decimal       @db.Decimal(12, 2)
+  total           Decimal       @db.Decimal(12, 2)
+  matchedPoLineId String?
+  discrepancyType String?
+  discrepancyNote String?
+  parsedInvoice   ParsedInvoice @relation(fields: [parsedInvoiceId], references: [id], onDelete: Cascade)
+  product         Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([parsedInvoiceId, sku])
+}
+
+model ProfitScenario {
+  id          String                 @id @default(cuid())
+  shopId      String
+  name        String
+  timeframeDays Int
+  budget      Decimal?               @db.Decimal(12, 2)
+  notes       String?
+  shop        Shop                   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  options     ProfitScenarioOption[]
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  @@index([shopId, createdAt])
+}
+
+model ProfitScenarioOption {
+  id                  String         @id @default(cuid())
+  scenarioId          String
+  productId           String?
+  supplierName        String
+  label               String
+  orderQuantity       Int
+  supplierPrice       Decimal        @db.Decimal(12, 2)
+  sellingPrice        Decimal        @db.Decimal(12, 2)
+  expectedSellThrough Decimal        @db.Decimal(5, 2)
+  projectedGrossProfit Decimal       @db.Decimal(12, 2)
+  capitalAtRisk       Decimal        @db.Decimal(12, 2)
+  breakEvenUnits      Int
+  paybackPeriodDays   Int
+  cashFlowImpact      Decimal        @db.Decimal(12, 2)
+  monteCarloJson      Json?
+  scenario            ProfitScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  product             Product?       @relation(fields: [productId], references: [id], onDelete: SetNull)
+}
+
+model CompetitorProduct {
+  id          String                    @id @default(cuid())
+  shopId      String
+  productId   String
+  competitorName String
+  url         String
+  active      Boolean                   @default(true)
+  product     Product                   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  shop        Shop                      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  snapshots   CompetitorPriceSnapshot[]
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+
+  @@index([shopId, productId])
+}
+
+model CompetitorPriceSnapshot {
+  id                  String            @id @default(cuid())
+  competitorProductId String
+  observedPrice       Decimal           @db.Decimal(12, 2)
+  merchantPrice       Decimal           @db.Decimal(12, 2)
+  priceDelta          Decimal           @db.Decimal(12, 2)
+  recommendation      String
+  observedAt          DateTime          @default(now())
+  competitorProduct   CompetitorProduct @relation(fields: [competitorProductId], references: [id], onDelete: Cascade)
+
+  @@index([competitorProductId, observedAt])
+}
+
+model FinancialSettings {
+  id                         String                   @id @default(cuid())
+  shopId                     String                   @unique
+  valuationMethod            InventoryValuationMethod @default(FIFO)
+  workingCapitalThreshold    Decimal                  @default(5000) @db.Decimal(12, 2)
+  industryDioBenchmark       Decimal                  @default(60) @db.Decimal(8, 2)
+  industryDsoBenchmark       Decimal                  @default(7) @db.Decimal(8, 2)
+  industryDpoBenchmark       Decimal                  @default(30) @db.Decimal(8, 2)
+  defaultDsoDays             Int                      @default(2)
+  shop                       Shop                     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  updatedAt                  DateTime                 @updatedAt
+  createdAt                  DateTime                 @default(now())
+}
+
+model InventoryCostLayer {
+  id              String   @id @default(cuid())
+  shopId          String
+  productId       String
+  sourceReference String?
+  receivedAt      DateTime @default(now())
+  quantityReceived Int
+  quantityRemaining Int
+  unitCost        Decimal  @db.Decimal(12, 2)
+  shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, productId, receivedAt])
+}
+
+model InventoryAdjustment {
+  id          String                    @id @default(cuid())
+  shopId      String
+  productId   String
+  locationId  String?
+  userId      String?
+  reason      InventoryAdjustmentReason
+  quantity    Int
+  unitCost    Decimal                   @db.Decimal(12, 2)
+  valueLost   Decimal                   @db.Decimal(12, 2)
+  note        String?
+  occurredAt  DateTime                  @default(now())
+  shop        Shop                      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  product     Product                   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  location    Location?                 @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  user        User?                     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([shopId, occurredAt])
+  @@index([shopId, reason])
+}
+
+model FinancialAlert {
+  id          String   @id @default(cuid())
+  shopId      String
+  type        String
+  severity    String
+  message     String
+  amount      Decimal? @db.Decimal(12, 2)
+  threshold   Decimal? @db.Decimal(12, 2)
+  resolvedAt  DateTime?
+  createdAt   DateTime @default(now())
+  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, type, createdAt])
+}
+
+model ReturnIntake {
+  id                 String             @id @default(cuid())
+  shopId             String
+  productId          String
+  supplierId         String?
+  orderName          String?
+  salesChannel       String             @default("Shopify")
+  condition          ReturnCondition
+  quantity           Int
+  unitCost           Decimal            @db.Decimal(12, 2)
+  margin             Decimal            @db.Decimal(12, 2)
+  restockingDecision RestockingDecision?
+  aiReason           String?
+  receivedAt         DateTime           @default(now())
+  shop               Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  product            Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, receivedAt])
+  @@index([shopId, condition])
+}
+
+model SupplierRma {
+  id          String    @id @default(cuid())
+  shopId      String
+  supplierId  String
+  rmaNumber   String
+  status      RmaStatus @default(DRAFT)
+  defectRate  Decimal   @db.Decimal(8, 2)
+  body        String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  shop        Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  supplier    Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, rmaNumber])
+  @@index([shopId, supplierId, status])
+}
+
+model InventoryBatch {
+  id          String           @id @default(cuid())
+  shopId      String
+  productId   String
+  locationId  String
+  batchNumber String
+  expiryDate  DateTime
+  receivedAt  DateTime         @default(now())
+  quantityReceived Int
+  quantityRemaining Int
+  unitCost    Decimal          @db.Decimal(12, 2)
+  disposition BatchDisposition @default(AVAILABLE)
+  shop        Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  product     Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  location    Location         @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  shipments   BatchShipment[]
+
+  @@unique([productId, batchNumber])
+  @@index([shopId, expiryDate])
+  @@index([shopId, disposition])
+}
+
+model BatchShipment {
+  id            String         @id @default(cuid())
+  shopId        String
+  batchId       String
+  orderName     String
+  customerEmail String?
+  quantity      Int
+  shippedAt     DateTime      @default(now())
+  batch         InventoryBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, orderName])
+  @@index([batchId, shippedAt])
+}
+
+model ThreePLConnection {
+  id            String          @id @default(cuid())
+  shopId        String
+  provider      ThreePLProvider
+  name          String
+  locationId    String?
+  apiKeyRef     String?
+  webhookSecret String?
+  active        Boolean         @default(true)
+  shop          Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, provider])
+}
+
+model ThreePLInventorySnapshot {
+  id                  String              @id @default(cuid())
+  shopId              String
+  productId           String
+  provider            ThreePLProvider
+  locationName        String
+  externalSku         String
+  threePLQuantity     Int
+  shopifyQuantity     Int
+  discrepancyQuantity Int
+  fbaFee              Decimal             @default(0) @db.Decimal(12, 2)
+  status              WarehouseSyncStatus @default(MATCHED)
+  observedAt          DateTime            @default(now())
+  shop                Shop                @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  product             Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, provider, observedAt])
+}
+
+model LocationReplenishmentRule {
+  id              String  @id @default(cuid())
+  shopId          String
+  productId       String
+  locationId      String
+  reorderPoint    Int
+  reorderQuantity Int
+  abcClass        String?
+  product         Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, locationId])
+  @@index([shopId, locationId])
+}
+
+model InventoryTransferSuggestion {
+  id             String         @id @default(cuid())
+  shopId         String
+  fromLocationId String
+  toLocationId   String
+  urgencyScore   Decimal        @db.Decimal(8, 2)
+  costEstimate   Decimal        @db.Decimal(12, 2)
+  reason         String
+  status         TransferStatus @default(SUGGESTED)
+  lines          InventoryTransferSuggestionLine[]
+  shop           Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  createdAt      DateTime       @default(now())
+
+  @@index([shopId, status, createdAt])
+}
+
+model InventoryTransferSuggestionLine {
+  id                String                      @id @default(cuid())
+  suggestionId      String
+  productId         String
+  sku               String
+  quantity          Int
+  monthsAtSource    Decimal                     @db.Decimal(8, 2)
+  daysAtDestination Decimal                     @db.Decimal(8, 2)
+  suggestion        InventoryTransferSuggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  product           Product                     @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model InventoryTransfer {
+  id             String         @id @default(cuid())
+  shopId         String
+  fromLocationId String
+  toLocationId   String
+  status         TransferStatus @default(DRAFT)
+  costEstimate   Decimal        @default(0) @db.Decimal(12, 2)
+  createdAt      DateTime       @default(now())
+  shippedAt      DateTime?
+  receivedAt     DateTime?
+  shop           Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  lines          InventoryTransferLine[]
+
+  @@index([shopId, status, createdAt])
+}
+
+model InventoryTransferLine {
+  id         String            @id @default(cuid())
+  transferId String
+  productId  String
+  sku        String
+  quantity   Int
+  transfer   InventoryTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  product    Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model CustomReport {
+  id            String              @id @default(cuid())
+  shopId        String
+  name          String
+  dimensions    Json
+  metrics       Json
+  filters       Json?
+  visualization ReportVisualization @default(TABLE)
+  createdBy     String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  shop          Shop                @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  schedules     ScheduledReport[]
+
+  @@unique([shopId, name])
+  @@index([shopId, updatedAt])
+}
+
+model ScheduledReport {
+  id             String                  @id @default(cuid())
+  shopId         String
+  customReportId String?
+  reportKey      String?
+  frequency      ReportScheduleFrequency @default(WEEKLY)
+  dayOfWeek      Int                     @default(1)
+  recipientEmail String
+  active         Boolean                 @default(true)
+  lastSentAt     DateTime?
+  nextSendAt     DateTime?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  shop           Shop                    @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customReport   CustomReport?           @relation(fields: [customReportId], references: [id], onDelete: SetNull)
+
+  @@index([shopId, active, nextSendAt])
+}
+
+model IntegrationConnection {
+  id                String            @id @default(cuid())
+  shopId            String
+  provider          IntegrationProvider
+  name              String
+  status            IntegrationStatus @default(PENDING)
+  externalAccountId String?
+  accessTokenRef    String?
+  config            Json?
+  lastSyncedAt      DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  shop              Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, provider, name])
+  @@index([shopId, provider, status])
+}
+
+model SyncLog {
+  id          String              @id @default(cuid())
+  shopId      String
+  provider    IntegrationProvider
+  direction   SyncDirection
+  endpoint    String
+  payload     Json?
+  response    Json?
+  status      SyncLogStatus
+  httpStatus  Int?
+  retryCount  Int                 @default(0)
+  durationMs  Int?
+  occurredAt  DateTime            @default(now())
+  shop        Shop                @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, provider, occurredAt])
+  @@index([shopId, status])
+}
+
+model ShopifyWebhookEvent {
+  id               String   @id @default(cuid())
+  shopId           String
+  topic            String
+  shopifyWebhookId String?
+  payload          Json
+  status           String   @default("RECEIVED")
+  processedAt      DateTime?
+  createdAt        DateTime @default(now())
+  shop             Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, topic, createdAt])
+}
+
+model ShopifyMetafieldSync {
+  id          String   @id @default(cuid())
+  shopId      String
+  productId   String
+  namespace   String
+  key         String
+  value       String
+  type        String   @default("single_line_text_field")
+  status      String   @default("PENDING")
+  syncedAt    DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, namespace, key])
+  @@index([shopId, status])
+}
+
+model ShopifyFlowEvent {
+  id        String   @id @default(cuid())
+  shopId    String
+  eventName String
+  payload   Json
+  status    String   @default("EMITTED")
+  emittedAt DateTime @default(now())
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, eventName, emittedAt])
+}
+
+model AccountingExport {
+  id         String               @id @default(cuid())
+  shopId     String
+  provider   IntegrationProvider
+  type       AccountingExportType
+  amount     Decimal              @default(0) @db.Decimal(12, 2)
+  payload    Json
+  response   Json?
+  status     String               @default("READY")
+  exportedAt DateTime             @default(now())
+  shop       Shop                 @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, provider, exportedAt])
+}
+
+model ChatBotConnection {
+  id            String              @id @default(cuid())
+  shopId        String
+  provider      IntegrationProvider
+  workspaceId   String?
+  channelId     String
+  channelName   String
+  botTokenRef   String?
+  status        IntegrationStatus   @default(CONNECTED)
+  dailyDigestAt String              @default("09:00")
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  shop          Shop                @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, provider, channelId])
+}
+
+model MobileOfflineSync {
+  id         String           @id @default(cuid())
+  shopId     String
+  deviceId   String
+  userId     String?
+  mode       String
+  payload    Json
+  status     MobileSyncStatus @default(QUEUED)
+  retryCount Int              @default(0)
+  createdAt  DateTime         @default(now())
+  syncedAt   DateTime?
+  shop       Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, deviceId, status])
+}
+
+model PublicApiKey {
+  id         String   @id @default(cuid())
+  shopId     String
+  name       String
+  keyHash    String
+  prefix     String
+  plan       String   @default("growth")
+  active     Boolean  @default(true)
+  lastUsedAt DateTime?
+  createdAt  DateTime @default(now())
+  shop       Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([prefix])
+  @@index([shopId, active])
+}
+
+model OutboundWebhookSubscription {
+  id          String   @id @default(cuid())
+  shopId      String
+  targetUrl   String
+  eventTypes  Json
+  secret      String
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, active])
+}
+
+model WhiteLabelProfile {
+  id             String           @id @default(cuid())
+  shopId         String           @unique
+  agencyName     String
+  brandName      String
+  logoUrl        String?
+  primaryColor   String           @default("#0f766e")
+  accentColor    String           @default("#111827")
+  supportEmail   String
+  customDomain   String?
+  emailFromName  String
+  pdfFooterText  String?
+  status         WhiteLabelStatus @default(DRAFT)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  shop           Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+model ManagedStore {
+  id                       String             @id @default(cuid())
+  shopId                   String
+  shopifyDomain            String
+  name                     String
+  currency                 String             @default("USD")
+  status                   ManagedStoreStatus @default(CONNECTED)
+  inventoryEfficiencyScore Decimal            @default(0) @db.Decimal(5, 2)
+  revenue30d               Decimal            @default(0) @db.Decimal(12, 2)
+  inventoryValue           Decimal            @default(0) @db.Decimal(12, 2)
+  unitsOnHand              Int                @default(0)
+  lastSyncedAt             DateTime?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+  shop                     Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  transfersFrom            CrossStoreTransferSuggestion[] @relation("TransferFromStore")
+  transfersTo              CrossStoreTransferSuggestion[] @relation("TransferToStore")
+
+  @@unique([shopId, shopifyDomain])
+  @@index([shopId, status])
+  @@index([shopId, inventoryEfficiencyScore])
+}
+
+model CrossStoreTransferSuggestion {
+  id             String                   @id @default(cuid())
+  shopId         String
+  fromStoreId    String
+  toStoreId      String
+  sku            String
+  productName    String
+  quantity       Int
+  urgencyScore   Decimal                  @db.Decimal(8, 2)
+  valueMoved     Decimal                  @db.Decimal(12, 2)
+  reason         String
+  status         CrossStoreTransferStatus @default(SUGGESTED)
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  shop           Shop                     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  fromStore      ManagedStore             @relation("TransferFromStore", fields: [fromStoreId], references: [id], onDelete: Cascade)
+  toStore        ManagedStore             @relation("TransferToStore", fields: [toStoreId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, status, urgencyScore])
+}
+
+model AIMemoryEvent {
+  id           String   @id @default(cuid())
+  shopId       String
+  userId       String?
+  productId    String?
+  sku          String?
+  topic        String
+  queryCount   Int      @default(1)
+  lastQuestion String
+  summary      String
+  importance   Decimal  @default(50) @db.Decimal(5, 2)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  shop         Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, topic])
+  @@index([shopId, importance])
+  @@index([shopId, sku])
+}
+
+model AIPinnedInsight {
+  id             String                 @id @default(cuid())
+  shopId         String
+  sessionId      String?
+  title          String
+  insight        String
+  sourceQuestion String?
+  confidence     String                 @default("Medium")
+  tags           Json?
+  createdBy      String?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  shop           Shop                   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  session        AIConsultationSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([shopId, createdAt])
+  @@index([shopId, confidence])
+}
+
+model RolePermission {
+  id         String     @id @default(cuid())
+  shopId     String
+  role       AccessRole
+  permission String
+  enabled    Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  shop       Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, role, permission])
+  @@index([shopId, role, enabled])
+}
+
+model UserRoleAssignment {
+  id         String     @id @default(cuid())
+  shopId     String
+  userId     String
+  role       AccessRole
+  active     Boolean    @default(true)
+  assignedBy String?
+  assignedAt DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  shop       Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, userId])
+  @@index([shopId, role, active])
+}
+
+model ComplianceAuditLog {
+  id                String          @id @default(cuid())
+  sequence          BigInt          @default(autoincrement())
+  shopId            String
+  userId            String?
+  role              AccessRole?
+  permission        String?
+  actionType        String
+  entityModel       String
+  entityId          String?
+  oldValue          Json?
+  newValue          Json?
+  ipAddress         String?
+  userAgent         String?
+  shopifySyncStatus AuditSyncStatus @default(NOT_SYNCED)
+  shopifySyncResult Json?
+  previousHash      String?
+  recordHash        String
+  timestamp         DateTime        @default(now())
+  shop              Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user              User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([shopId, timestamp])
+  @@index([shopId, actionType])
+  @@index([shopId, entityModel, entityId])
+  @@index([shopId, userId])
+}
+
+model Store {
+  id            String   @id @default(cuid())
+  shopId        String
+  shopifyDomain String   @unique
+  name          String
+  timezone      String   @default("UTC")
+  currency      String   @default("USD")
+  status        String   @default("ACTIVE")
+  settings      Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([shopId, status])
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  shopId      String
+  key         String
+  name        String
+  rank        Int
+  description String?
+  system      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([shopId, key])
+  @@index([shopId, rank])
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  module      String
+  action      String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ProductVariant {
+  id               String   @id @default(cuid())
+  shopId           String
+  productId        String
+  shopifyVariantId String?
+  sku              String
+  title            String
+  optionValues     Json?
+  barcode          String?
+  price            Decimal  @db.Decimal(12, 2)
+  cost             Decimal  @db.Decimal(12, 2)
+  weightGrams      Int?
+  active           Boolean  @default(true)
+  product          Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventoryLevels  InventoryLevel[]
+  purchaseItems    PurchaseOrderItem[]
+  stockCountItems  StockCountItem[]
+  transferItems    StockTransferItem[]
+  returnItems      ReturnItem[]
+  forecasts        Forecast[]
+  reorderSuggestions ReorderSuggestion[]
+  competitorPrices CompetitorPrice[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([shopId, sku])
+  @@index([productId, active])
+}
+
+model InventoryLevel {
+  id                String         @id @default(cuid())
+  shopId            String
+  variantId         String
+  locationId        String
+  shopifyInventoryItemId String?
+  available         Int            @default(0)
+  committed         Int            @default(0)
+  incoming          Int            @default(0)
+  reserved          Int            @default(0)
+  safetyStock       Int            @default(0)
+  reorderPoint      Int            @default(0)
+  reorderQuantity   Int            @default(0)
+  lastSyncedAt      DateTime?
+  variant           ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  location          Location       @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@unique([variantId, locationId])
+  @@index([shopId, locationId])
+}
+
+model PurchaseOrderItem {
+  id              String          @id @default(cuid())
+  shopId          String
+  purchaseOrderId String
+  variantId       String?
+  sku             String
+  title           String?
+  quantityOrdered Int
+  quantityReceived Int            @default(0)
+  unitCost        Decimal         @db.Decimal(12, 2)
+  taxAmount       Decimal         @default(0) @db.Decimal(12, 2)
+  landedUnitCost  Decimal?        @db.Decimal(12, 2)
+  status          String          @default("OPEN")
+  purchaseOrder   PurchaseOrder   @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  variant         ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([shopId, purchaseOrderId])
+  @@index([shopId, sku])
+}
+
+model StockTransfer {
+  id             String              @id @default(cuid())
+  shopId         String
+  transferNumber String
+  fromLocationId String
+  toLocationId   String
+  status         TransferStatus      @default(DRAFT)
+  reason         String?
+  createdBy      String?
+  shippedAt      DateTime?
+  receivedAt     DateTime?
+  items          StockTransferItem[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@unique([shopId, transferNumber])
+  @@index([shopId, status])
+}
+
+model StockTransferItem {
+  id              String          @id @default(cuid())
+  shopId          String
+  stockTransferId String
+  variantId       String?
+  sku             String
+  quantity        Int
+  receivedQuantity Int            @default(0)
+  stockTransfer   StockTransfer   @relation(fields: [stockTransferId], references: [id], onDelete: Cascade)
+  variant         ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([shopId, stockTransferId])
+}
+
+model StockCount {
+  id          String           @id @default(cuid())
+  shopId      String
+  name        String
+  locationId  String?
+  mode        CountMode        @default(FULL)
+  status      StocktakeStatus  @default(DRAFT)
+  blindCount  Boolean          @default(false)
+  scheduledAt DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
+  approvedAt  DateTime?
+  createdBy   String?
+  approvedBy  String?
+  items       StockCountItem[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([shopId, status])
+  @@index([shopId, locationId])
+}
+
+model StockCountItem {
+  id               String          @id @default(cuid())
+  shopId           String
+  stockCountId     String
+  variantId        String?
+  sku              String
+  expectedQuantity Int
+  countedQuantity  Int?
+  varianceUnits    Int             @default(0)
+  varianceValue    Decimal         @default(0) @db.Decimal(12, 2)
+  status           String          @default("OPEN")
+  notes            String?
+  stockCount       StockCount      @relation(fields: [stockCountId], references: [id], onDelete: Cascade)
+  variant          ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@unique([stockCountId, sku])
+  @@index([shopId, status])
+}
+
+model BatchLot {
+  id                String          @id @default(cuid())
+  shopId            String
+  variantId         String?
+  locationId        String
+  lotNumber         String
+  expiryDate        DateTime?
+  receivedAt        DateTime        @default(now())
+  quantityReceived  Int
+  quantityRemaining Int
+  disposition       BatchDisposition @default(AVAILABLE)
+  recallStatus      String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@unique([shopId, lotNumber, locationId])
+  @@index([shopId, expiryDate])
+}
+
+model ReturnRecord {
+  id              String       @id @default(cuid())
+  shopId          String
+  returnNumber    String
+  orderName       String?
+  customerEmail   String?
+  salesChannel    String       @default("Shopify")
+  status          String       @default("OPEN")
+  receivedAt      DateTime?
+  restockingNotes String?
+  items           ReturnItem[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@unique([shopId, returnNumber])
+  @@index([shopId, status])
+}
+
+model ReturnItem {
+  id                 String             @id @default(cuid())
+  shopId             String
+  returnRecordId     String
+  variantId          String?
+  sku                String
+  quantity           Int
+  condition          ReturnCondition
+  restockingDecision RestockingDecision?
+  supplierFault      Boolean            @default(false)
+  returnRecord       ReturnRecord       @relation(fields: [returnRecordId], references: [id], onDelete: Cascade)
+  variant            ProductVariant?    @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([shopId, condition])
+}
+
+model Forecast {
+  id              String          @id @default(cuid())
+  shopId          String
+  variantId       String
+  forecastDate    DateTime        @default(now())
+  horizonDays     Int
+  baselineDemand  Decimal         @db.Decimal(12, 2)
+  adjustedDemand  Decimal         @db.Decimal(12, 2)
+  confidence      String          @default("Medium")
+  modelVersion    String          @default("imp-demand-v1")
+  inputs          Json?
+  variant         ProductVariant  @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  accuracies      ForecastAccuracyCanonical[]
+  createdAt       DateTime        @default(now())
+
+  @@index([shopId, forecastDate])
+  @@index([variantId, horizonDays])
+}
+
+model ForecastAccuracyCanonical {
+  id             String   @id @default(cuid())
+  shopId         String
+  forecastId     String
+  periodStart    DateTime
+  periodEnd      DateTime
+  forecastUnits  Decimal  @db.Decimal(12, 2)
+  actualUnits    Decimal  @db.Decimal(12, 2)
+  mape           Decimal  @db.Decimal(8, 2)
+  notes          String?
+  forecast       Forecast @relation(fields: [forecastId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, periodStart])
+}
+
+model ReorderSuggestion {
+  id                 String          @id @default(cuid())
+  shopId             String
+  variantId          String
+  supplierId         String?
+  quantity           Int
+  estimatedCost      Decimal         @db.Decimal(12, 2)
+  daysOfStockLeft    Decimal         @db.Decimal(8, 2)
+  priorityScore      Decimal         @db.Decimal(8, 2)
+  status             String          @default("REVIEW")
+  reason             String
+  generatedByJobId   String?
+  variant            ProductVariant  @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  @@index([shopId, status, priorityScore])
+}
+
+model Alert {
+  id          String        @id @default(cuid())
+  shopId      String
+  ruleId      String?
+  severity    AlertSeverity
+  status      AlertStatus   @default(OPEN)
+  title       String
+  message     String
+  entityModel String?
+  entityId    String?
+  firedAt     DateTime      @default(now())
+  acknowledgedAt DateTime?
+  resolvedAt  DateTime?
+  rule        AlertRule?    @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+
+  @@index([shopId, status, severity])
+}
+
+model AlertRule {
+  id          String   @id @default(cuid())
+  shopId      String
+  name        String
+  metric      String
+  operator    String
+  threshold   Decimal  @db.Decimal(12, 2)
+  severity    AlertSeverity @default(WARNING)
+  channels    Json
+  enabled     Boolean  @default(true)
+  alerts      Alert[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([shopId, name])
+  @@index([shopId, enabled])
+}
+
+model Report {
+  id            String              @id @default(cuid())
+  shopId        String
+  name          String
+  reportKey     String
+  dimensions    Json
+  metrics       Json
+  filters       Json?
+  visualization ReportVisualization @default(TABLE)
+  createdBy     String?
+  schedules     ReportSchedule[]
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@unique([shopId, name])
+}
+
+model ReportSchedule {
+  id             String                  @id @default(cuid())
+  shopId         String
+  reportId       String
+  frequency      ReportScheduleFrequency @default(WEEKLY)
+  recipientEmail String
+  active         Boolean                 @default(true)
+  nextRunAt      DateTime?
+  lastRunAt      DateTime?
+  report         Report                  @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, active, nextRunAt])
+}
+
+model BillingPlan {
+  id              String         @id @default(cuid())
+  key             BillingPlanKey @unique
+  name            String
+  monthlyPriceCents Int
+  skuLimit        Int?
+  locationLimit   Int?
+  storeLimit      Int?
+  features        Json
+  overageSkuCents Int            @default(1)
+  active          Boolean        @default(true)
+  subscriptions   Subscription[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model Subscription {
+  id                 String             @id @default(cuid())
+  shopId             String
+  billingPlanId      String
+  status             SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  skuCount           Int                @default(0)
+  locationCount      Int                @default(0)
+  storeCount         Int                @default(1)
+  overageAmountCents Int                @default(0)
+  externalCustomerId String?
+  externalSubscriptionId String?
+  billingPlan        BillingPlan        @relation(fields: [billingPlanId], references: [id])
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@index([shopId, status])
+}
+
+model FeatureFlag {
+  id        String        @id @default(cuid())
+  shopId    String
+  key       String
+  plan      BillingPlanKey?
+  enabled   Boolean       @default(false)
+  config    Json?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@unique([shopId, key])
+}
+
+model AIConversation {
+  id           String      @id @default(cuid())
+  shopId       String
+  userId       String?
+  title        String
+  intent       String?
+  dataSnapshot Json?
+  messages     AIMessage[]
+  pins         AIInsightPin[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([shopId, updatedAt])
+}
+
+model AIMessage {
+  id             String        @id @default(cuid())
+  shopId         String
+  conversationId String
+  role           AIMessageRole
+  content        String
+  tokens         Int?
+  model          String?
+  metadata       Json?
+  conversation   AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime      @default(now())
+
+  @@index([shopId, conversationId, createdAt])
+}
+
+model AIInsightPin {
+  id             String         @id @default(cuid())
+  shopId         String
+  conversationId String?
+  title          String
+  insight        String
+  confidence     String         @default("Medium")
+  sourceMessageId String?
+  tags           Json?
+  createdBy      String?
+  conversation   AIConversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([shopId, createdAt])
+}
+
+model MigrationJob {
+  id             String             @id @default(cuid())
+  shopId         String
+  source         String             @default("Stocky")
+  status         MigrationJobStatus @default(DRAFT)
+  dryRun         Boolean            @default(true)
+  fieldMapping   Json
+  summary        Json?
+  rollbackToken  String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdBy      String?
+  logs           MigrationLog[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@index([shopId, status])
+}
+
+model MigrationLog {
+  id          String              @id @default(cuid())
+  shopId      String
+  jobId       String
+  entityType  MigrationEntityType
+  rowNumber   Int?
+  level       String              @default("INFO")
+  message     String
+  rawRow      Json?
+  mappedRow   Json?
+  importedId  String?
+  skipped     Boolean             @default(false)
+  reason      String?
+  job         MigrationJob        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  createdAt   DateTime            @default(now())
+
+  @@index([shopId, jobId, entityType])
+}
+
+model ScenarioSimulation {
+  id          String   @id @default(cuid())
+  shopId      String
+  name        String
+  inputs      Json
+  outputs     Json
+  monteCarlo  Json?
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([shopId, createdAt])
+}
+
+model CompetitorPrice {
+  id             String          @id @default(cuid())
+  shopId         String
+  variantId      String?
+  sku            String
+  competitorName String
+  url            String
+  observedPrice  Decimal         @db.Decimal(12, 2)
+  merchantPrice  Decimal?        @db.Decimal(12, 2)
+  currency       String          @default("USD")
+  observedAt     DateTime        @default(now())
+  recommendation String?
+  variant        ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([shopId, sku, observedAt])
+}
+
+model WhiteLabelConfig {
+  id            String   @id @default(cuid())
+  shopId        String   @unique
+  agencyName    String
+  brandName     String
+  logoUrl       String?
+  primaryColor  String   @default("#0f766e")
+  accentColor   String   @default("#111827")
+  supportEmail  String
+  customDomain  String?
+  emailBranding Json?
+  pdfBranding   Json?
+  active        Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model APIKey {
+  id         String   @id @default(cuid())
+  shopId     String
+  name       String
+  prefix     String   @unique
+  keyHash    String
+  scopes     Json
+  active     Boolean  @default(true)
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  createdBy  String?
+  createdAt  DateTime @default(now())
+
+  @@index([shopId, active])
+}
