@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  SHOPIFY_WEBHOOK_REGISTRATIONS,
   SHOPIFY_WEBHOOK_TOPICS,
   buildShopifyInstallUrl,
   buildCsvJournalEntry,
@@ -10,6 +11,7 @@ import {
   normalizeShopifyDomain,
   postRealtimeStockAlert,
   rateLimitForPlan,
+  registerShopifyWebhookSubscriptions,
   signShopifyWebhookPayload,
   verifyShopifyOAuthHmac,
   verifyShopifyWebhookSignature
@@ -111,8 +113,52 @@ describe("platformIntegration.service", () => {
 
   it("declares the complete Shopify webhook topic coverage", () => {
     expect(SHOPIFY_WEBHOOK_TOPICS).toContain("products/create");
+    expect(SHOPIFY_WEBHOOK_TOPICS).toContain("refunds/create");
     expect(SHOPIFY_WEBHOOK_TOPICS).toContain("orders/refunded");
     expect(SHOPIFY_WEBHOOK_TOPICS).toContain("app/uninstalled");
+  });
+
+  it("registers Shopify webhooks through Admin GraphQL and logs each subscription", async () => {
+    process.env.SHOPIFY_ADMIN_API_VERSION = "2026-04";
+    const db = {
+      feature: { findUnique: vi.fn().mockResolvedValue({ status: "ENABLED" }) },
+      syncLog: { create: vi.fn().mockResolvedValue({ id: "log_1" }) }
+    } as any;
+    const fetcher = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: vi.fn().mockResolvedValue({
+        data: {
+          webhookSubscriptionCreate: {
+            webhookSubscription: { id: "gid://shopify/WebhookSubscription/1", topic: "PRODUCTS_CREATE" },
+            userErrors: []
+          }
+        }
+      })
+    }) as any;
+
+    const results = await registerShopifyWebhookSubscriptions(
+      { shopId: "shop_1", shop: "core-store.myshopify.com", accessToken: "shpat_test", appUrl: "https://imp.test" },
+      db,
+      fetcher
+    );
+
+    expect(results).toHaveLength(SHOPIFY_WEBHOOK_REGISTRATIONS.length);
+    expect(fetcher).toHaveBeenCalledWith(
+      "https://core-store.myshopify.com/admin/api/2026-04/graphql.json",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({ "X-Shopify-Access-Token": "shpat_test" })
+      })
+    );
+    expect(JSON.parse(fetcher.mock.calls[0][1].body).variables).toMatchObject({
+      topic: "PRODUCTS_CREATE",
+      webhookSubscription: { callbackUrl: "https://imp.test/api/platform/shopify/webhooks/products/create", format: "JSON" }
+    });
+    expect(db.syncLog.create).toHaveBeenCalledTimes(SHOPIFY_WEBHOOK_REGISTRATIONS.length);
+    expect(db.syncLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ endpoint: "/admin/api/2026-04/graphql.json#webhookSubscriptionCreate", status: "SUCCESS" }) })
+    );
   });
 
   it("stores Shopify webhook events and logs the sync call", async () => {

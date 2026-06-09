@@ -19,8 +19,21 @@ export const SHOPIFY_WEBHOOK_TOPICS = [
   "orders/create",
   "orders/fulfilled",
   "orders/refunded",
+  "refunds/create",
   "fulfillments/create",
   "app/uninstalled"
+] as const;
+
+export const SHOPIFY_WEBHOOK_REGISTRATIONS = [
+  { topic: "products/create", shopifyTopic: "PRODUCTS_CREATE" },
+  { topic: "products/update", shopifyTopic: "PRODUCTS_UPDATE" },
+  { topic: "products/delete", shopifyTopic: "PRODUCTS_DELETE" },
+  { topic: "inventory_levels/update", shopifyTopic: "INVENTORY_LEVELS_UPDATE" },
+  { topic: "orders/create", shopifyTopic: "ORDERS_CREATE" },
+  { topic: "orders/fulfilled", shopifyTopic: "ORDERS_FULFILLED" },
+  { topic: "refunds/create", shopifyTopic: "REFUNDS_CREATE" },
+  { topic: "fulfillments/create", shopifyTopic: "FULFILLMENTS_CREATE" },
+  { topic: "app/uninstalled", shopifyTopic: "APP_UNINSTALLED" }
 ] as const;
 
 export const SHOPIFY_DEFAULT_SCOPES = [
@@ -105,7 +118,13 @@ export async function completeShopifyOAuthInstall(
   if (!verifyShopifyOAuthHmac(input.params)) throw new Error("Invalid Shopify OAuth HMAC");
 
   const token = await exchangeShopifyCodeForToken({ shop, code }, fetcher);
-  return persistShopifyOAuthConnection({ shop, accessToken: token.access_token, scope: token.scope, appUrl: input.appUrl }, db);
+  const persisted = await persistShopifyOAuthConnection({ shop, accessToken: token.access_token, scope: token.scope, appUrl: input.appUrl }, db);
+  const webhooks = await registerShopifyWebhookSubscriptions(
+    { shopId: persisted.shop.id, shop, accessToken: token.access_token, appUrl: input.appUrl },
+    db,
+    fetcher
+  );
+  return { ...persisted, webhooks };
 }
 
 export async function persistShopifyOAuthConnection(
@@ -175,6 +194,121 @@ export async function persistShopifyOAuthConnection(
   );
 
   return { shop, connection };
+}
+
+export async function registerShopifyWebhookSubscriptions(
+  input: { shopId: string; shop: string; accessToken: string; appUrl?: string },
+  db: PrismaClient = prisma,
+  fetcher: typeof fetch = fetch
+) {
+  await assertFeatureEnabled(input.shopId, FEATURE_KEYS.integrationsPlatform, db);
+  const shop = normalizeShopifyDomain(input.shop);
+  const appUrl = (input.appUrl ?? getAppBaseUrl()).replace(/\/$/, "");
+  const version = process.env.SHOPIFY_ADMIN_API_VERSION ?? "2026-04";
+  const endpoint = `https://${shop}/admin/api/${version}/graphql.json`;
+  const mutation = `
+    mutation WebhookSubscriptionCreate($topic: WebhookSubscriptionTopic!, $webhookSubscription: WebhookSubscriptionInput!) {
+      webhookSubscriptionCreate(topic: $topic, webhookSubscription: $webhookSubscription) {
+        webhookSubscription {
+          id
+          topic
+          endpoint {
+            __typename
+            ... on WebhookHttpEndpoint {
+              callbackUrl
+            }
+          }
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+
+  const results = [];
+  for (const registration of SHOPIFY_WEBHOOK_REGISTRATIONS) {
+    const callbackUrl = `${appUrl}/api/platform/shopify/webhooks/${registration.topic}`;
+    const startedAt = Date.now();
+
+    try {
+      const response = await fetcher(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Shopify-Access-Token": input.accessToken
+        },
+        body: JSON.stringify({
+          query: mutation,
+          variables: {
+            topic: registration.shopifyTopic,
+            webhookSubscription: {
+              callbackUrl,
+              format: "JSON"
+            }
+          }
+        })
+      });
+      const payload = await response.json();
+      const userErrors = payload.data?.webhookSubscriptionCreate?.userErrors ?? [];
+      const graphqlErrors = payload.errors ?? [];
+      const subscription = payload.data?.webhookSubscriptionCreate?.webhookSubscription;
+      const succeeded = response.ok && userErrors.length === 0 && graphqlErrors.length === 0 && Boolean(subscription?.id);
+      const result = {
+        topic: registration.topic,
+        shopifyTopic: registration.shopifyTopic,
+        callbackUrl,
+        status: succeeded ? "SUCCESS" : "FAILED",
+        subscriptionId: subscription?.id,
+        userErrors,
+        graphqlErrors
+      };
+
+      await logSyncCall(
+        {
+          shopId: input.shopId,
+          provider: "SHOPIFY",
+          direction: "OUTBOUND",
+          endpoint: `/admin/api/${version}/graphql.json#webhookSubscriptionCreate`,
+          payload: { topic: registration.shopifyTopic, callbackUrl },
+          response: result as Prisma.InputJsonValue,
+          status: succeeded ? "SUCCESS" : "FAILED",
+          httpStatus: response.status,
+          durationMs: Date.now() - startedAt
+        },
+        db
+      );
+
+      results.push(result);
+    } catch (error) {
+      const result = {
+        topic: registration.topic,
+        shopifyTopic: registration.shopifyTopic,
+        callbackUrl,
+        status: "FAILED",
+        error: error instanceof Error ? error.message : "Webhook registration failed"
+      };
+
+      await logSyncCall(
+        {
+          shopId: input.shopId,
+          provider: "SHOPIFY",
+          direction: "OUTBOUND",
+          endpoint: `/admin/api/${version}/graphql.json#webhookSubscriptionCreate`,
+          payload: { topic: registration.shopifyTopic, callbackUrl },
+          response: result,
+          status: "FAILED",
+          durationMs: Date.now() - startedAt
+        },
+        db
+      );
+
+      results.push(result);
+    }
+  }
+
+  return results;
 }
 
 export async function connectIntegration(

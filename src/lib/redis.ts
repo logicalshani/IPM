@@ -1,6 +1,12 @@
 import { Queue } from "bullmq";
 
-const connection = process.env.REDIS_URL ? redisConnectionFromUrl(process.env.REDIS_URL) : undefined;
+const connection = shouldCreateRedisQueues() && process.env.REDIS_URL ? redisConnectionFromUrl(process.env.REDIS_URL) : undefined;
+
+type RedisQueueEnv = {
+  REDIS_URL?: string;
+  NEXT_PHASE?: string;
+  DISABLE_REDIS_QUEUES?: string;
+};
 
 export const QUEUE_NAMES = {
   shopifySync: "shopify-sync",
@@ -50,6 +56,10 @@ export const inventorySyncQueue = shopifySyncQueue;
 
 function makeQueue(name: string) {
   return connection ? new Queue(name, { connection }) : undefined;
+}
+
+export function shouldCreateRedisQueues(env: RedisQueueEnv = process.env as RedisQueueEnv) {
+  return Boolean(env.REDIS_URL) && env.NEXT_PHASE !== "phase-production-build" && env.DISABLE_REDIS_QUEUES !== "1";
 }
 
 function redisConnectionFromUrl(url: string) {

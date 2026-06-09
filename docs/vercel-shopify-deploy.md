@@ -54,3 +54,5 @@ https://YOUR-VERCEL-DOMAIN.vercel.app/api/platform/shopify/webhooks/orders/creat
 ```
 
 Use the same webhook secret in Shopify and `SHOPIFY_WEBHOOK_SECRET`. Set `SHOPIFY_TOKEN_ENCRYPTION_KEY` to a long random value so Shopify Admin API access tokens are encrypted before they are stored.
+
+After OAuth succeeds, IMP automatically creates Admin GraphQL webhook subscriptions for product, inventory, order, fulfillment, refund, and app uninstall events using `SHOPIFY_ADMIN_API_VERSION` and logs each registration in sync logs.
