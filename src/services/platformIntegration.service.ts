@@ -196,6 +196,27 @@ export async function persistShopifyOAuthConnection(
   return { shop, connection };
 }
 
+export async function getShopifyInstallStatus(input: { shop: string }, db: PrismaClient = prisma) {
+  const shopifyDomain = normalizeShopifyDomain(input.shop);
+  const shop = await db.shop.findUnique({
+    where: { shopifyDomain },
+    include: {
+      integrationConnections: {
+        where: { provider: "SHOPIFY", status: "CONNECTED" },
+        orderBy: { updatedAt: "desc" },
+        take: 1
+      }
+    }
+  });
+
+  const connection = shop?.integrationConnections[0] ?? null;
+  return {
+    installed: Boolean(connection),
+    shop,
+    connection
+  };
+}
+
 export async function registerShopifyWebhookSubscriptions(
   input: { shopId: string; shop: string; accessToken: string; appUrl?: string },
   db: PrismaClient = prisma,

@@ -4,7 +4,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ListControls } from "@/components/ListControls";
 import { Metric } from "@/components/Metric";
 import { StatusBadge } from "@/components/StatusBadge";
-import { getPlatformDashboard, SHOPIFY_WEBHOOK_TOPICS } from "@/services/platformIntegration.service";
+import { getPlatformDashboard, getShopifyInstallStatus, SHOPIFY_WEBHOOK_TOPICS } from "@/services/platformIntegration.service";
 import { PlatformActions } from "./platform-actions";
 import { ShopifyInstallForm } from "./shopify-install-form";
 
@@ -32,6 +32,12 @@ export default async function PlatformPage({
       metrics: { connected: 0, failedLogs: 0, queuedOffline: 0, activeApiKeys: 0 }
     };
   }
+  const requestedShop = searchParams?.shop;
+  const shopifyInstallStatus =
+    searchParams?.installed === "shopify" && requestedShop
+      ? await getShopifyInstallStatus({ shop: requestedShop }).catch(() => null)
+      : null;
+  const showShopifyInstallError = Boolean(searchParams?.shopify_install_error || (searchParams?.installed === "shopify" && requestedShop && !shopifyInstallStatus?.installed));
 
   return (
     <div className="space-y-6">
@@ -50,9 +56,9 @@ export default async function PlatformPage({
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)]">
         <div
           className={`rounded-md border px-4 py-3 text-sm ${
-            searchParams?.shopify_install_error
+            showShopifyInstallError
               ? "border-red-200 bg-red-50 text-red-800"
-              : searchParams?.installed === "shopify"
+              : shopifyInstallStatus?.installed
                 ? "border-emerald-200 bg-emerald-50 text-emerald-800"
                 : "border-gray-200 bg-white text-steel"
           }`}
@@ -60,8 +66,10 @@ export default async function PlatformPage({
         >
           {searchParams?.shopify_install_error ? (
             <p>{searchParams.shopify_install_error}</p>
-          ) : searchParams?.installed === "shopify" ? (
-            <p>Shopify connected for {searchParams.shop ?? "this store"}. Webhooks, metafields, Flow events, and sync logs can now use this connection.</p>
+          ) : searchParams?.installed === "shopify" && requestedShop && !shopifyInstallStatus?.installed ? (
+            <p>Shopify redirected back for {requestedShop}, but IMP did not find a saved Shopify Admin API connection. Start the install from this same browser and approve the app in Shopify.</p>
+          ) : shopifyInstallStatus?.installed ? (
+            <p>Shopify connected for {requestedShop ?? "this store"}. Webhooks, metafields, Flow events, and sync logs can now use this connection.</p>
           ) : (
             <p>Install the Shopify app from here when testing with a development store. The OAuth callback stores a connected Shopify Admin API integration.</p>
           )}

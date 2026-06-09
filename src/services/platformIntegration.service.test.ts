@@ -8,6 +8,7 @@ import {
   createPublicApiKey,
   handleChatCommand,
   handleShopifyWebhook,
+  getShopifyInstallStatus,
   normalizeShopifyDomain,
   postRealtimeStockAlert,
   rateLimitForPlan,
@@ -116,6 +117,31 @@ describe("platformIntegration.service", () => {
     expect(SHOPIFY_WEBHOOK_TOPICS).toContain("refunds/create");
     expect(SHOPIFY_WEBHOOK_TOPICS).toContain("orders/refunded");
     expect(SHOPIFY_WEBHOOK_TOPICS).toContain("app/uninstalled");
+  });
+
+  it("checks Shopify install status from the persisted connection", async () => {
+    const db = {
+      shop: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: "shop_1",
+          shopifyDomain: "core-store.myshopify.com",
+          integrationConnections: [{ id: "conn_1", provider: "SHOPIFY", status: "CONNECTED" }]
+        })
+      }
+    } as any;
+
+    await expect(getShopifyInstallStatus({ shop: "core-store.myshopify.com" }, db)).resolves.toMatchObject({
+      installed: true,
+      connection: { id: "conn_1" }
+    });
+    expect(db.shop.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { shopifyDomain: "core-store.myshopify.com" },
+        include: expect.objectContaining({
+          integrationConnections: expect.objectContaining({ where: { provider: "SHOPIFY", status: "CONNECTED" } })
+        })
+      })
+    );
   });
 
   it("registers Shopify webhooks through Admin GraphQL and logs each subscription", async () => {
