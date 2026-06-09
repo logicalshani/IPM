@@ -42,8 +42,6 @@ export const SHOPIFY_DEFAULT_SCOPES = [
   "read_inventory",
   "write_inventory",
   "read_orders",
-  "read_fulfillments",
-  "write_fulfillments",
   "read_locations"
 ] as const;
 
