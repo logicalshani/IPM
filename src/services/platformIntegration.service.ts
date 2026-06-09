@@ -6,10 +6,10 @@ import type {
   SyncDirection,
   SyncLogStatus
 } from "@prisma/client";
-import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createCipheriv, createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { platformIntegrationQueue } from "@/lib/redis";
-import { FEATURE_KEYS, assertFeatureEnabled } from "./feature.service";
+import { FEATURE_KEYS, assertFeatureEnabled, upsertFeature } from "./feature.service";
 
 export const SHOPIFY_WEBHOOK_TOPICS = [
   "products/create",
@@ -22,6 +22,160 @@ export const SHOPIFY_WEBHOOK_TOPICS = [
   "fulfillments/create",
   "app/uninstalled"
 ] as const;
+
+export const SHOPIFY_DEFAULT_SCOPES = [
+  "read_products",
+  "write_products",
+  "read_inventory",
+  "write_inventory",
+  "read_orders",
+  "read_fulfillments",
+  "write_fulfillments",
+  "read_locations"
+] as const;
+
+type ShopifyTokenResponse = {
+  access_token: string;
+  scope: string;
+};
+
+export function normalizeShopifyDomain(shop: string) {
+  const cleaned = shop
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/\/.*$/, "");
+
+  if (!/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(cleaned)) {
+    throw new Error("Enter a valid Shopify shop domain like store-name.myshopify.com");
+  }
+
+  return cleaned;
+}
+
+export function getAppBaseUrl() {
+  const configured = process.env.APP_URL?.trim();
+  if (configured) return configured.replace(/\/$/, "");
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL.replace(/\/$/, "")}`;
+  return "http://localhost:3000";
+}
+
+export function buildShopifyInstallUrl(input: { shop: string; state: string; appUrl?: string; scopes?: readonly string[] }) {
+  const shop = normalizeShopifyDomain(input.shop);
+  const apiKey = process.env.SHOPIFY_API_KEY;
+  if (!apiKey) throw new Error("SHOPIFY_API_KEY is not configured");
+
+  const appUrl = (input.appUrl ?? getAppBaseUrl()).replace(/\/$/, "");
+  const redirectUri = `${appUrl}/api/auth/shopify/callback`;
+  const url = new URL(`https://${shop}/admin/oauth/authorize`);
+  url.searchParams.set("client_id", apiKey);
+  url.searchParams.set("scope", (input.scopes ?? SHOPIFY_DEFAULT_SCOPES).join(","));
+  url.searchParams.set("redirect_uri", redirectUri);
+  url.searchParams.set("state", input.state);
+  return url.toString();
+}
+
+export function verifyShopifyOAuthHmac(params: URLSearchParams, secret = process.env.SHOPIFY_API_SECRET) {
+  const hmac = params.get("hmac");
+  if (!hmac || !secret) return false;
+
+  const message = Array.from(params.entries())
+    .filter(([key]) => key !== "hmac" && key !== "signature")
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${key}=${value}`)
+    .join("&");
+
+  const expected = createHmac("sha256", secret).update(message).digest("hex");
+  const expectedBuffer = Buffer.from(expected, "utf8");
+  const receivedBuffer = Buffer.from(hmac, "utf8");
+  return expectedBuffer.length === receivedBuffer.length && timingSafeEqual(expectedBuffer, receivedBuffer);
+}
+
+export async function completeShopifyOAuthInstall(
+  input: { params: URLSearchParams; expectedState?: string | null; appUrl?: string },
+  db: PrismaClient = prisma,
+  fetcher: typeof fetch = fetch
+) {
+  const shop = normalizeShopifyDomain(input.params.get("shop") ?? "");
+  const code = input.params.get("code");
+  const state = input.params.get("state");
+
+  if (!code) throw new Error("Shopify OAuth callback is missing code");
+  if (!input.expectedState || !state || state !== input.expectedState) throw new Error("Shopify OAuth state mismatch");
+  if (!verifyShopifyOAuthHmac(input.params)) throw new Error("Invalid Shopify OAuth HMAC");
+
+  const token = await exchangeShopifyCodeForToken({ shop, code }, fetcher);
+  return persistShopifyOAuthConnection({ shop, accessToken: token.access_token, scope: token.scope, appUrl: input.appUrl }, db);
+}
+
+export async function persistShopifyOAuthConnection(
+  input: { shop: string; accessToken: string; scope: string; appUrl?: string },
+  db: PrismaClient = prisma
+) {
+  const shopifyDomain = normalizeShopifyDomain(input.shop);
+  const shop = await db.shop.upsert({
+    where: { shopifyDomain },
+    create: {
+      shopifyDomain,
+      name: shopifyDomain.replace(".myshopify.com", ""),
+      billingPlan: "starter"
+    },
+    update: {
+      name: shopifyDomain.replace(".myshopify.com", "")
+    }
+  });
+
+  await upsertFeature({ shopId: shop.id, key: FEATURE_KEYS.integrationsPlatform, plan: shop.billingPlan, status: "ENABLED" }, db);
+
+  const installedAt = new Date();
+  const encryptedAccessToken = encryptShopifyAccessToken(input.accessToken);
+  const connection = await db.integrationConnection.upsert({
+    where: { shopId_provider_name: { shopId: shop.id, provider: "SHOPIFY", name: "Shopify Admin API" } },
+    create: {
+      shopId: shop.id,
+      provider: "SHOPIFY",
+      name: "Shopify Admin API",
+      status: "CONNECTED",
+      externalAccountId: shopifyDomain,
+      accessTokenRef: hashApiKey(input.accessToken).slice(0, 24),
+      config: {
+        encryptedAccessToken,
+        scopes: input.scope.split(",").map((scope) => scope.trim()).filter(Boolean),
+        appUrl: input.appUrl ?? getAppBaseUrl(),
+        installedAt: installedAt.toISOString()
+      },
+      lastSyncedAt: installedAt
+    },
+    update: {
+      status: "CONNECTED",
+      externalAccountId: shopifyDomain,
+      accessTokenRef: hashApiKey(input.accessToken).slice(0, 24),
+      config: {
+        encryptedAccessToken,
+        scopes: input.scope.split(",").map((scope) => scope.trim()).filter(Boolean),
+        appUrl: input.appUrl ?? getAppBaseUrl(),
+        installedAt: installedAt.toISOString()
+      },
+      lastSyncedAt: installedAt
+    }
+  });
+
+  await logSyncCall(
+    {
+      shopId: shop.id,
+      provider: "SHOPIFY",
+      direction: "INBOUND",
+      endpoint: "/admin/oauth/access_token",
+      payload: { shop: shopifyDomain, scopes: input.scope },
+      response: { connectionId: connection.id },
+      status: "SUCCESS",
+      httpStatus: 200
+    },
+    db
+  );
+
+  return { shop, connection };
+}
 
 export async function connectIntegration(
   input: {
@@ -437,6 +591,37 @@ export async function getPlatformDashboard(shopId: string, db: PrismaClient = pr
 
 function hashApiKey(apiKey: string) {
   return createHash("sha256").update(apiKey).digest("hex");
+}
+
+async function exchangeShopifyCodeForToken(input: { shop: string; code: string }, fetcher: typeof fetch): Promise<ShopifyTokenResponse> {
+  const clientId = process.env.SHOPIFY_API_KEY;
+  const clientSecret = process.env.SHOPIFY_API_SECRET;
+  if (!clientId || !clientSecret) throw new Error("Shopify API credentials are not configured");
+
+  const response = await fetcher(`https://${input.shop}/admin/oauth/access_token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code: input.code })
+  });
+
+  const payload = await response.json();
+  if (!response.ok || !payload.access_token) {
+    throw new Error(payload.error_description ?? payload.error ?? "Shopify token exchange failed");
+  }
+
+  return { access_token: payload.access_token, scope: payload.scope ?? "" };
+}
+
+function encryptShopifyAccessToken(accessToken: string) {
+  const secret = process.env.SHOPIFY_TOKEN_ENCRYPTION_KEY ?? process.env.SHOPIFY_API_SECRET;
+  if (!secret) throw new Error("SHOPIFY_TOKEN_ENCRYPTION_KEY or SHOPIFY_API_SECRET is required to store Shopify tokens");
+
+  const key = createHash("sha256").update(secret).digest();
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const ciphertext = Buffer.concat([cipher.update(accessToken, "utf8"), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+  return `v1:${iv.toString("base64")}:${authTag.toString("base64")}:${ciphertext.toString("base64")}`;
 }
 
 function today() {

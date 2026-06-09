@@ -1,17 +1,114 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   SHOPIFY_WEBHOOK_TOPICS,
+  buildShopifyInstallUrl,
   buildCsvJournalEntry,
+  completeShopifyOAuthInstall,
   createPublicApiKey,
   handleChatCommand,
   handleShopifyWebhook,
+  normalizeShopifyDomain,
   postRealtimeStockAlert,
   rateLimitForPlan,
   signShopifyWebhookPayload,
+  verifyShopifyOAuthHmac,
   verifyShopifyWebhookSignature
 } from "./platformIntegration.service";
+import { createHmac } from "node:crypto";
 
 describe("platformIntegration.service", () => {
+  it("normalizes Shopify domains and builds OAuth install URLs", () => {
+    process.env.SHOPIFY_API_KEY = "client_id_test";
+
+    const url = new URL(buildShopifyInstallUrl({ shop: "https://Core-Store.myshopify.com/admin", state: "state_1", appUrl: "https://imp.test" }));
+
+    expect(normalizeShopifyDomain("Core-Store.myshopify.com")).toBe("core-store.myshopify.com");
+    expect(url.origin).toBe("https://core-store.myshopify.com");
+    expect(url.pathname).toBe("/admin/oauth/authorize");
+    expect(url.searchParams.get("client_id")).toBe("client_id_test");
+    expect(url.searchParams.get("redirect_uri")).toBe("https://imp.test/api/auth/shopify/callback");
+    expect(url.searchParams.get("scope")).toContain("read_inventory");
+    expect(() => normalizeShopifyDomain("example.com")).toThrow("valid Shopify shop domain");
+  });
+
+  it("verifies Shopify OAuth callback HMACs", () => {
+    const secret = "oauth_secret";
+    const params = new URLSearchParams({
+      shop: "core-store.myshopify.com",
+      code: "code_123",
+      state: "state_1",
+      timestamp: "1710000000"
+    });
+    const message = Array.from(params.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) => `${key}=${value}`)
+      .join("&");
+    params.set("hmac", createHmac("sha256", secret).update(message).digest("hex"));
+
+    expect(verifyShopifyOAuthHmac(params, secret)).toBe(true);
+    params.set("code", "tampered");
+    expect(verifyShopifyOAuthHmac(params, secret)).toBe(false);
+  });
+
+  it("completes Shopify OAuth install through service-layer writes", async () => {
+    process.env.SHOPIFY_API_KEY = "client_id_test";
+    process.env.SHOPIFY_API_SECRET = "oauth_secret";
+    process.env.SHOPIFY_TOKEN_ENCRYPTION_KEY = "token_secret";
+
+    const params = new URLSearchParams({
+      shop: "core-store.myshopify.com",
+      code: "code_123",
+      state: "state_1",
+      timestamp: "1710000000"
+    });
+    const message = Array.from(params.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) => `${key}=${value}`)
+      .join("&");
+    params.set("hmac", createHmac("sha256", process.env.SHOPIFY_API_SECRET!).update(message).digest("hex"));
+
+    const db = {
+      shop: {
+        upsert: vi.fn().mockResolvedValue({ id: "shop_1", shopifyDomain: "core-store.myshopify.com", billingPlan: "starter" })
+      },
+      feature: {
+        upsert: vi.fn().mockResolvedValue({ id: "feature_1", status: "ENABLED" }),
+        findUnique: vi.fn().mockResolvedValue({ status: "ENABLED" })
+      },
+      integrationConnection: {
+        upsert: vi.fn().mockResolvedValue({ id: "conn_1", status: "CONNECTED" })
+      },
+      syncLog: { create: vi.fn().mockResolvedValue({ id: "log_1" }) }
+    } as any;
+    const fetcher = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ access_token: "shpat_test_token", scope: "read_products,write_products" })
+    }) as any;
+
+    await expect(completeShopifyOAuthInstall({ params, expectedState: "state_1", appUrl: "https://imp.test" }, db, fetcher)).resolves.toMatchObject({
+      shop: { id: "shop_1" },
+      connection: { status: "CONNECTED" }
+    });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "https://core-store.myshopify.com/admin/oauth/access_token",
+      expect.objectContaining({ method: "POST" })
+    );
+    expect(db.integrationConnection.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          provider: "SHOPIFY",
+          status: "CONNECTED",
+          externalAccountId: "core-store.myshopify.com",
+          config: expect.objectContaining({ encryptedAccessToken: expect.stringMatching(/^v1:/) })
+        })
+      })
+    );
+    expect(db.syncLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ endpoint: "/admin/oauth/access_token", status: "SUCCESS" }) })
+    );
+  });
+
   it("declares the complete Shopify webhook topic coverage", () => {
     expect(SHOPIFY_WEBHOOK_TOPICS).toContain("products/create");
     expect(SHOPIFY_WEBHOOK_TOPICS).toContain("orders/refunded");

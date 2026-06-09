@@ -14,6 +14,19 @@ export async function GET() {
       }
     },
     paths: {
+      "/api/auth/shopify": {
+        get: {
+          summary: "Start Shopify OAuth install",
+          parameters: [{ name: "shop", in: "query", required: true, schema: { type: "string", example: "store.myshopify.com" } }],
+          responses: { "307": { description: "Redirects to Shopify OAuth authorization" } }
+        }
+      },
+      "/api/auth/shopify/callback": {
+        get: {
+          summary: "Complete Shopify OAuth install",
+          responses: { "307": { description: "Redirects back to the Platform console with success or error state" } }
+        }
+      },
       "/api/public/inventory": publicPath("Inventory levels and product inventory"),
       "/api/public/suppliers": publicPath("Supplier records"),
       "/api/public/purchase-orders": publicPath("Purchase orders"),

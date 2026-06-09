@@ -6,11 +6,16 @@ import { Metric } from "@/components/Metric";
 import { StatusBadge } from "@/components/StatusBadge";
 import { getPlatformDashboard, SHOPIFY_WEBHOOK_TOPICS } from "@/services/platformIntegration.service";
 import { PlatformActions } from "./platform-actions";
+import { ShopifyInstallForm } from "./shopify-install-form";
 
 const demoShopId = "demo-shop";
 export const dynamic = "force-dynamic";
 
-export default async function PlatformPage() {
+export default async function PlatformPage({
+  searchParams
+}: {
+  searchParams?: { installed?: string; shop?: string; shopify_install_error?: string };
+}) {
   let dashboard;
   try {
     dashboard = await getPlatformDashboard(demoShopId);
@@ -41,6 +46,28 @@ export default async function PlatformPage() {
       </header>
 
       <PlatformActions />
+
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)]">
+        <div
+          className={`rounded-md border px-4 py-3 text-sm ${
+            searchParams?.shopify_install_error
+              ? "border-red-200 bg-red-50 text-red-800"
+              : searchParams?.installed === "shopify"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border-gray-200 bg-white text-steel"
+          }`}
+          role="status"
+        >
+          {searchParams?.shopify_install_error ? (
+            <p>{searchParams.shopify_install_error}</p>
+          ) : searchParams?.installed === "shopify" ? (
+            <p>Shopify connected for {searchParams.shop ?? "this store"}. Webhooks, metafields, Flow events, and sync logs can now use this connection.</p>
+          ) : (
+            <p>Install the Shopify app from here when testing with a development store. The OAuth callback stores a connected Shopify Admin API integration.</p>
+          )}
+        </div>
+        <ShopifyInstallForm />
+      </section>
 
       <section className="grid gap-3 md:grid-cols-4">
         <Metric label="Connected surfaces" value={dashboard.metrics.connected} />
