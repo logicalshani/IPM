@@ -1,0 +1,7 @@
+.env
+.env.*
+!.env.example
+!.env.vercel.example
+dev-server*.log
+localtunnel*.log
+cloudflared*.log
