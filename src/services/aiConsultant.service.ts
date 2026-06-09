@@ -3,6 +3,7 @@ import { openai } from "@ai-sdk/openai";
 import { streamText } from "ai";
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { hasConfiguredAIProvider, textFallbackStream } from "@/lib/ai-fallback";
 import { FEATURE_KEYS, assertFeatureEnabled } from "./feature.service";
 import { rememberAIContext } from "./platformInfrastructure.service";
 
@@ -93,6 +94,16 @@ export async function createAIConsultation(
     });
   };
 
+  if (!hasConfiguredAIProvider()) {
+    const text = formatDeterministicConsultantAnswer(deterministic);
+    await onFinish({ text });
+    return {
+      sessionId: session.id,
+      analysis: deterministic,
+      stream: textFallbackStream(text)
+    };
+  }
+
   try {
     return {
       sessionId: session.id,
@@ -106,6 +117,30 @@ export async function createAIConsultation(
       stream: streamText({ model: openai("gpt-4o"), messages, onFinish })
     };
   }
+}
+
+function formatDeterministicConsultantAnswer(analysis: ReturnType<typeof answerFromSnapshot>) {
+  const rows = Array.isArray(analysis.table) ? analysis.table : [];
+  const headers = rows[0] ? Object.keys(rows[0]) : ["Result"];
+  const table = rows.length
+    ? [
+        `| ${headers.join(" |")} |`,
+        `| ${headers.map(() => "---").join(" |")} |`,
+        ...rows.map((row) => `| ${headers.map((header) => String((row as Record<string, unknown>)[header] ?? "")).join(" |")} |`)
+      ].join("\n")
+    : "| Result |\n| --- |\n| No rows matched this query yet. |";
+
+  return [
+    table,
+    "",
+    `Summary: ${analysis.summary}`,
+    "",
+    `Confidence: ${analysis.confidence}`,
+    "",
+    "Reasoning: This answer used the live IMP product, supplier, inventory, movement, and demand snapshot available for this shop. Provider AI keys are not configured, so IMP returned its deterministic operating analysis instead of calling an external model.",
+    "",
+    `Suggested next action: ${analysis.suggestedAction}`
+  ].join("\n");
 }
 
 export async function recordAIConsultationFeedback(

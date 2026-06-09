@@ -95,16 +95,26 @@ export type AuditInput = {
 
 export async function seedDefaultRolePermissions(shopId: string, db: PrismaClient = prisma) {
   await assertFeatureEnabled(shopId, FEATURE_KEYS.rolesCompliance, db);
-  const writes = ACCESS_ROLES.flatMap((role) =>
-    PERMISSIONS.map((permission) =>
-      db.rolePermission.upsert({
-        where: { shopId_role_permission: { shopId, role, permission } },
-        create: { shopId, role, permission, enabled: DEFAULT_PERMISSION_MATRIX[role].includes(permission) },
-        update: { enabled: DEFAULT_PERMISSION_MATRIX[role].includes(permission) }
-      })
-    )
-  );
-  return Promise.all(writes);
+  const permissions = [];
+  const inputs = ACCESS_ROLES.flatMap((role) => PERMISSIONS.map((permission) => ({ role, permission })));
+  const batchSize = 5;
+
+  for (let index = 0; index < inputs.length; index += batchSize) {
+    const batch = inputs.slice(index, index + batchSize);
+    permissions.push(
+      ...(await Promise.all(
+        batch.map(({ role, permission }) =>
+          db.rolePermission.upsert({
+          where: { shopId_role_permission: { shopId, role, permission } },
+          create: { shopId, role, permission, enabled: DEFAULT_PERMISSION_MATRIX[role].includes(permission) },
+          update: { enabled: DEFAULT_PERMISSION_MATRIX[role].includes(permission) }
+          })
+        )
+      ))
+    );
+  }
+
+  return permissions;
 }
 
 export async function assignUserRole(

@@ -9,7 +9,7 @@ import type {
 import { createCipheriv, createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { platformIntegrationQueue } from "@/lib/redis";
-import { FEATURE_KEYS, assertFeatureEnabled, upsertFeature } from "./feature.service";
+import { FEATURE_KEYS, assertFeatureEnabled, enableAllFeaturesForShop } from "./feature.service";
 
 export const SHOPIFY_WEBHOOK_TOPICS = [
   "products/create",
@@ -135,14 +135,15 @@ export async function persistShopifyOAuthConnection(
     create: {
       shopifyDomain,
       name: shopifyDomain.replace(".myshopify.com", ""),
-      billingPlan: "starter"
+      billingPlan: "enterprise"
     },
     update: {
-      name: shopifyDomain.replace(".myshopify.com", "")
+      name: shopifyDomain.replace(".myshopify.com", ""),
+      billingPlan: "enterprise"
     }
   });
 
-  await upsertFeature({ shopId: shop.id, key: FEATURE_KEYS.integrationsPlatform, plan: shop.billingPlan, status: "ENABLED" }, db);
+  await enableAllFeaturesForShop(shop.id, shop.billingPlan, db);
 
   const installedAt = new Date();
   const encryptedAccessToken = encryptShopifyAccessToken(input.accessToken);
@@ -213,6 +214,12 @@ export async function getShopifyInstallStatus(input: { shop: string }, db: Prism
     shop,
     connection
   };
+}
+
+export async function resolveShopIdForShopifyDomain(shop: string, db: PrismaClient = prisma) {
+  const shopifyDomain = normalizeShopifyDomain(shop);
+  const record = await db.shop.findUnique({ where: { shopifyDomain }, select: { id: true } });
+  return record?.id ?? null;
 }
 
 export async function registerShopifyWebhookSubscriptions(

@@ -3,6 +3,28 @@ import request from "supertest";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/services/feature.service", () => ({
+  ALL_FEATURE_KEYS: [
+    "inventory.stocktakes",
+    "inventory.barcodes",
+    "inventory.ai_insights",
+    "suppliers.intelligence",
+    "suppliers.pricing",
+    "suppliers.communications",
+    "ai.consultant",
+    "ai.demand_sensing",
+    "ai.invoice_parser",
+    "ai.profit_simulation",
+    "ai.competitor_monitor",
+    "purchase_orders.enterprise",
+    "financial.intelligence",
+    "operations.intelligence",
+    "analytics.reporting",
+    "integrations.platform",
+    "platform.infrastructure",
+    "roles.compliance",
+    "platform.stocky_migration",
+    "billing.plans"
+  ],
   FEATURE_KEYS: {
     stocktakes: "inventory.stocktakes",
     barcodeSystem: "inventory.barcodes",
@@ -19,7 +41,11 @@ vi.mock("@/services/feature.service", () => ({
     financialIntelligence: "financial.intelligence",
     operationsIntelligence: "operations.intelligence",
     analyticsReporting: "analytics.reporting",
-    integrationsPlatform: "integrations.platform"
+    integrationsPlatform: "integrations.platform",
+    platformInfrastructure: "platform.infrastructure",
+    rolesCompliance: "roles.compliance",
+    stockyMigration: "platform.stocky_migration",
+    billingPlans: "billing.plans"
   },
   upsertFeature: vi.fn().mockResolvedValue({ key: "inventory.stocktakes", status: "ENABLED" })
 }));

@@ -6,6 +6,8 @@ type RedisQueueEnv = {
   REDIS_URL?: string;
   NEXT_PHASE?: string;
   DISABLE_REDIS_QUEUES?: string;
+  NODE_ENV?: string;
+  VITEST?: string;
 };
 
 export const QUEUE_NAMES = {
@@ -59,7 +61,7 @@ function makeQueue(name: string) {
 }
 
 export function shouldCreateRedisQueues(env: RedisQueueEnv = process.env as RedisQueueEnv) {
-  return Boolean(env.REDIS_URL) && env.NEXT_PHASE !== "phase-production-build" && env.DISABLE_REDIS_QUEUES !== "1";
+  return Boolean(env.REDIS_URL) && env.NEXT_PHASE !== "phase-production-build" && env.DISABLE_REDIS_QUEUES !== "1" && env.NODE_ENV !== "test" && env.VITEST !== "true";
 }
 
 function redisConnectionFromUrl(url: string) {

@@ -26,6 +26,8 @@ export const FEATURE_KEYS = {
 
 export type FeatureKey = (typeof FEATURE_KEYS)[keyof typeof FEATURE_KEYS];
 
+export const ALL_FEATURE_KEYS = Object.values(FEATURE_KEYS) as FeatureKey[];
+
 export async function isFeatureEnabled(
   shopId: string,
   key: FeatureKey,
@@ -73,4 +75,28 @@ export async function upsertFeature(
       config: input.config
     }
   });
+}
+
+export async function enableAllFeaturesForShop(shopId: string, plan: string, db: PrismaClient = prisma) {
+  const features = [];
+  const batchSize = 5;
+  for (let index = 0; index < ALL_FEATURE_KEYS.length; index += batchSize) {
+    const batch = ALL_FEATURE_KEYS.slice(index, index + batchSize);
+    features.push(
+      ...(await Promise.all(
+        batch.map((key) =>
+          upsertFeature(
+            {
+              shopId,
+              key,
+              plan,
+              status: "ENABLED"
+            },
+            db
+          )
+        )
+      ))
+    );
+  }
+  return features;
 }

@@ -1,10 +1,11 @@
 import { apiError, ok } from "@/lib/api";
-import { handleShopifyWebhook, verifyShopifyWebhookSignature } from "@/services/platformIntegration.service";
+import { handleShopifyWebhook, resolveShopIdForShopifyDomain, verifyShopifyWebhookSignature } from "@/services/platformIntegration.service";
 
 export async function POST(request: Request, { params }: { params: { topic: string[] } }) {
   try {
     const topic = params.topic.join("/");
-    const shopId = request.headers.get("x-imp-shop-id") ?? "demo-shop";
+    const shopDomain = request.headers.get("x-shopify-shop-domain");
+    const shopId = request.headers.get("x-imp-shop-id") ?? (shopDomain ? await resolveShopIdForShopifyDomain(shopDomain) : null) ?? "demo-shop";
     const shopifyWebhookId = request.headers.get("x-shopify-webhook-id") ?? undefined;
     const body = await request.text();
     if (process.env.SHOPIFY_WEBHOOK_SECRET) {
